@@ -3,29 +3,17 @@ import SwiftUI
 struct ReaderToolbar: View {
     @Bindable var book: MangaBook
     @Environment(\.openWindow) private var openWindow
+    var onOpenFolder: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 16) {
-            // Spread offset buttons
-            HStack(spacing: 8) {
-                Button {
-                    book.shiftOffset(by: -1)
-                } label: {
-                    Text("-1")
-                }
-                .disabled(book.offset <= 0)
-
-                Text("Offset: \(book.offset)")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    book.shiftOffset(by: 1)
-                } label: {
-                    Text("+1")
-                }
-                .disabled(book.offset >= book.pageURLs.count - 1)
+            Button {
+                book.shiftPageForward()
+            } label: {
+                Label("+1", systemImage: "arrow.right.doc.on.clipboard")
             }
+            .help("Skip forward one page")
+            .disabled(!book.canShiftForward)
 
             Spacer()
 
@@ -54,13 +42,23 @@ struct ReaderToolbar: View {
 
             Spacer()
 
-            // Duplicate window
-            Button {
-                duplicateWindow()
-            } label: {
-                Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+            HStack(spacing: 12) {
+                // Open folder
+                Button {
+                    onOpenFolder()
+                } label: {
+                    Label("Open", systemImage: "folder")
+                }
+                .help("Open another folder")
+
+                // Duplicate window
+                Button {
+                    duplicateWindow()
+                } label: {
+                    Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+                }
+                .help("Open in new window")
             }
-            .help("Open in new window")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -70,8 +68,7 @@ struct ReaderToolbar: View {
         guard let folderURL = book.folderURL else { return }
         guard let windowID = try? ReaderWindowID(
             folderURL: folderURL,
-            spreadIndex: book.currentSpreadIndex,
-            offset: book.offset
+            spreadIndex: book.currentSpreadIndex
         ) else { return }
         openWindow(id: "reader", value: windowID)
     }

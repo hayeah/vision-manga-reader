@@ -14,6 +14,13 @@ struct ContentView: View {
                 readerView
             }
         }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [UTType.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFolderSelection(result)
+        }
         .onAppear {
             restoreLastFolder()
         }
@@ -41,20 +48,15 @@ struct ContentView: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .fileImporter(
-            isPresented: $showFilePicker,
-            allowedContentTypes: [UTType.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            handleFolderSelection(result)
-        }
     }
 
     private var readerView: some View {
         VStack(spacing: 0) {
             SpreadView(book: book)
 
-            ReaderToolbar(book: book)
+            ReaderToolbar(book: book) {
+                showFilePicker = true
+            }
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

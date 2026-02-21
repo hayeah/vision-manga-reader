@@ -44,7 +44,6 @@ struct DuplicatedReaderView: View {
             return
         }
 
-        book.offset = windowID.offset
         book.currentSpreadIndex = min(windowID.spreadIndex, max(0, book.spreadCount - 1))
     }
 }

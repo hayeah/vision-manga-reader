@@ -4,9 +4,8 @@ struct ReaderWindowID: Codable, Hashable {
     var id: UUID
     var folderBookmark: Data
     var spreadIndex: Int
-    var offset: Int
 
-    init(folderURL: URL, spreadIndex: Int, offset: Int) throws {
+    init(folderURL: URL, spreadIndex: Int) throws {
         self.id = UUID()
         self.folderBookmark = try folderURL.bookmarkData(
             options: [],
@@ -14,7 +13,6 @@ struct ReaderWindowID: Codable, Hashable {
             relativeTo: nil
         )
         self.spreadIndex = spreadIndex
-        self.offset = offset
     }
 
     func resolveFolder() -> URL? {

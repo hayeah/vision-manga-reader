@@ -1,46 +1,31 @@
 import Foundation
+import CoreGraphics
+import ImageIO
 import Observation
+
+enum SpreadLayout {
+    case single(Int)        // one page shown alone (landscape or unpaired portrait)
+    case pair(Int, Int)     // two portrait pages: (right, left) for RTL
+}
 
 @Observable
 class MangaBook {
     var folderURL: URL?
     var pageURLs: [URL] = []
     var currentSpreadIndex: Int = 0
-    var offset: Int = 0 // 0 = normal pairing, 1 = first page alone (cover)
+    private(set) var spreads: [SpreadLayout] = []
+    private(set) var pageSizes: [CGSize] = []
 
-    var spreadCount: Int {
-        guard !pageURLs.isEmpty else { return 0 }
-        let effectivePages = pageURLs.count - offset
-        if effectivePages <= 0 { return offset > 0 ? 1 : 0 }
-        // offset pages form spread 0 alone, then pairs
-        let pairedSpreads = (effectivePages + 1) / 2
-        return offset > 0 ? 1 + pairedSpreads : pairedSpreads
-    }
+    var spreadCount: Int { spreads.count }
 
     /// Returns page indices for a spread. RTL: right = earlier page, left = later page.
     func pagesForSpread(_ index: Int) -> (right: Int?, left: Int?) {
-        guard !pageURLs.isEmpty else { return (nil, nil) }
-
-        if offset == 1 {
-            if index == 0 {
-                // Cover page alone
-                return (right: 0, left: nil)
-            }
-            // After cover, pairs start at page index 1
-            let base = 1 + (index - 1) * 2
-            let rightPage = base
-            let leftPage = base + 1
-            if rightPage >= pageURLs.count { return (nil, nil) }
-            if leftPage >= pageURLs.count { return (right: rightPage, left: nil) }
-            return (right: rightPage, left: leftPage)
-        } else {
-            // offset == 0: normal pairing (0,1), (2,3), ...
-            let base = index * 2
-            let rightPage = base
-            let leftPage = base + 1
-            if rightPage >= pageURLs.count { return (nil, nil) }
-            if leftPage >= pageURLs.count { return (right: rightPage, left: nil) }
-            return (right: rightPage, left: leftPage)
+        guard index >= 0, index < spreads.count else { return (nil, nil) }
+        switch spreads[index] {
+        case .single(let page):
+            return (right: page, left: nil)
+        case .pair(let right, let left):
+            return (right: right, left: left)
         }
     }
 
@@ -56,32 +41,28 @@ class MangaBook {
         }
     }
 
-    func toggleOffset() {
-        shiftOffset(by: offset == 0 ? 1 : -1)
+    /// Can +1 shift produce a new pair from the current spread?
+    var canShiftForward: Bool {
+        let pages = pagesForSpread(currentSpreadIndex)
+        // Only works when currently on a pair
+        guard pages.left != nil, let rightPage = pages.right else { return false }
+        let nextRight = rightPage + 1
+        // Need two portrait pages to form a new pair
+        guard nextRight + 1 < pageURLs.count else { return false }
+        return !isLandscape(pageSizes[nextRight]) && !isLandscape(pageSizes[nextRight + 1])
     }
 
-    /// Shift offset by delta, keeping the view near the same page.
-    func shiftOffset(by delta: Int) {
-        // Find the first page currently visible
-        let currentPages = pagesForSpread(currentSpreadIndex)
-        let anchorPage = currentPages.right ?? 0
+    /// Shift forward by one page: pair [9,8] → single [8], then pair [10,9].
+    func shiftPageForward() {
+        guard canShiftForward else { return }
+        let rightPage = pagesForSpread(currentSpreadIndex).right!
 
-        offset = max(0, min(offset + delta, pageURLs.count - 1))
-
-        // Find the spread that contains anchorPage under the new offset
-        if offset == 0 {
-            currentSpreadIndex = anchorPage / 2
-        } else {
-            if anchorPage == 0 {
-                currentSpreadIndex = 0
-            } else {
-                currentSpreadIndex = 1 + (anchorPage - 1) / 2
-            }
-        }
-
-        // Clamp
-        let maxIndex = max(0, spreadCount - 1)
-        currentSpreadIndex = min(currentSpreadIndex, maxIndex)
+        // Keep spreads before current, orphan the right page as single, rebuild rest
+        var result = Array(spreads.prefix(currentSpreadIndex))
+        result.append(.single(rightPage))
+        appendAutoSpreads(from: rightPage + 1, to: &result)
+        spreads = result
+        currentSpreadIndex += 1
     }
 
     func loadPages(from url: URL) {
@@ -89,6 +70,7 @@ class MangaBook {
         guard url.startAccessingSecurityScopedResource() else { return }
         folderURL = url
         pageURLs = FolderAccess.enumerateImages(in: url)
+        buildSpreads()
         currentSpreadIndex = 0
     }
 
@@ -96,7 +78,55 @@ class MangaBook {
         folderURL?.stopAccessingSecurityScopedResource()
         folderURL = nil
         pageURLs = []
+        spreads = []
+        pageSizes = []
         currentSpreadIndex = 0
+    }
+
+    // MARK: - Smart spread layout
+
+    private func buildSpreads() {
+        pageSizes = pageURLs.map { Self.imageSize(for: $0) }
+        var result: [SpreadLayout] = []
+        appendAutoSpreads(from: 0, to: &result)
+        spreads = result
+    }
+
+    /// Auto-detect and append spreads starting from page index `start`.
+    private func appendAutoSpreads(from start: Int, to result: inout [SpreadLayout]) {
+        var i = start
+        while i < pageURLs.count {
+            if isLandscape(pageSizes[i]) {
+                result.append(.single(i))
+                i += 1
+            } else if i + 1 < pageURLs.count, !isLandscape(pageSizes[i + 1]) {
+                result.append(.pair(i, i + 1))
+                i += 2
+            } else {
+                result.append(.single(i))
+                i += 1
+            }
+        }
+    }
+
+    private func isLandscape(_ size: CGSize) -> Bool {
+        size.width > size.height
+    }
+
+    static func imageSize(for url: URL) -> CGSize {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = props[kCGImagePropertyPixelWidth] as? CGFloat,
+              let height = props[kCGImagePropertyPixelHeight] as? CGFloat
+        else {
+            return CGSize(width: 1, height: 2) // Default to portrait
+        }
+        // EXIF orientations 5–8 swap width and height
+        let orientation = props[kCGImagePropertyOrientation] as? Int ?? 1
+        if orientation >= 5 && orientation <= 8 {
+            return CGSize(width: height, height: width)
+        }
+        return CGSize(width: width, height: height)
     }
 
     deinit {

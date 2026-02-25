@@ -4,6 +4,7 @@ struct SpreadView: View {
     @Bindable var book: MangaBook
 
     @State private var dragOffset: CGFloat = 0
+    @State private var wasSinglePage: Bool = false
 
     private var pages: (right: Int?, left: Int?) {
         book.pagesForSpread(book.currentSpreadIndex)
@@ -57,6 +58,9 @@ struct SpreadView: View {
             )
         }
         .background(.black)
-        .animation(.easeInOut(duration: 0.25), value: book.currentSpreadIndex)
+        .animation(isSinglePage != wasSinglePage ? nil : .easeInOut(duration: 0.25), value: book.currentSpreadIndex)
+        .onChange(of: book.currentSpreadIndex) {
+            wasSinglePage = isSinglePage
+        }
     }
 }

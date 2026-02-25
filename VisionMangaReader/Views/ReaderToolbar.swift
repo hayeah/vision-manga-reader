@@ -8,12 +8,13 @@ struct ReaderToolbar: View {
     var body: some View {
         HStack(spacing: 16) {
             Button {
-                book.shiftPageForward()
+                book.toggleShift()
             } label: {
-                Label("+1", systemImage: "arrow.right.doc.on.clipboard")
+                Image(systemName: "arrow.left.arrow.right")
+                    .symbolVariant(book.isCurrentSequenceShifted ? .fill : .none)
             }
-            .help("Skip forward one page")
-            .disabled(!book.canShiftForward)
+            .help("Toggle page pairing offset")
+            .disabled(!book.canToggleShift)
 
             Spacer()
 

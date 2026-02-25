@@ -16,6 +16,13 @@ class MangaBook {
     private(set) var spreads: [SpreadLayout] = []
     private(set) var pageSizes: [CGSize] = []
 
+    // Toggle support
+    private var landscapeFlags: [Bool] = []
+    private var portraitSequences: [(start: Int, count: Int)] = []
+    private var shiftedSequences: Set<Int> = []
+    // Maps each spread index to (sequenceIndex, localSpreadIndex); nil for landscape spreads
+    private var spreadSequenceMap: [(seq: Int, local: Int)?] = []
+
     var spreadCount: Int { spreads.count }
 
     /// Returns page indices for a spread. RTL: right = earlier page, left = later page.
@@ -41,36 +48,56 @@ class MangaBook {
         }
     }
 
-    /// Can +1 shift produce a new pair from the current spread?
-    var canShiftForward: Bool {
-        let pages = pagesForSpread(currentSpreadIndex)
-        // Only works when currently on a pair
-        guard pages.left != nil, let rightPage = pages.right else { return false }
-        let nextRight = rightPage + 1
-        // Need two portrait pages to form a new pair
-        guard nextRight + 1 < pageURLs.count else { return false }
-        return !isLandscape(pageSizes[nextRight]) && !isLandscape(pageSizes[nextRight + 1])
+    // MARK: - Shift toggle
+
+    /// Whether the current spread can be shift-toggled (in a portrait sequence with ≥2 pages)
+    var canToggleShift: Bool {
+        guard currentSpreadIndex < spreadSequenceMap.count,
+              let mapping = spreadSequenceMap[currentSpreadIndex] else { return false }
+        return portraitSequences[mapping.seq].count >= 2
     }
 
-    /// Shift forward by one page: pair [9,8] → single [8], then pair [10,9].
-    func shiftPageForward() {
-        guard canShiftForward else { return }
-        let rightPage = pagesForSpread(currentSpreadIndex).right!
-
-        // Keep spreads before current, orphan the right page as single, rebuild rest
-        var result = Array(spreads.prefix(currentSpreadIndex))
-        result.append(.single(rightPage))
-        appendAutoSpreads(from: rightPage + 1, to: &result)
-        spreads = result
-        currentSpreadIndex += 1
+    /// Whether the current spread's portrait sequence is shifted
+    var isCurrentSequenceShifted: Bool {
+        guard currentSpreadIndex < spreadSequenceMap.count,
+              let mapping = spreadSequenceMap[currentSpreadIndex] else { return false }
+        return shiftedSequences.contains(mapping.seq)
     }
+
+    /// Toggle the shift state for the portrait sequence containing the current spread
+    func toggleShift() {
+        guard let mapping = spreadSequenceMap[currentSpreadIndex] else { return }
+        let seqIdx = mapping.seq
+        let localIdx = mapping.local
+
+        if shiftedSequences.contains(seqIdx) {
+            shiftedSequences.remove(seqIdx)
+        } else {
+            shiftedSequences.insert(seqIdx)
+        }
+
+        rebuildSpreads()
+
+        // Restore position: same local index within the sequence, clamped
+        if let seqStart = firstSpreadIndex(forSequence: seqIdx) {
+            let count = spreadCount(forSequence: seqIdx)
+            let clampedLocal = min(localIdx, count - 1)
+            currentSpreadIndex = seqStart + clampedLocal
+        }
+    }
+
+    // MARK: - Loading
 
     func loadPages(from url: URL) {
         closeFolder()
         guard url.startAccessingSecurityScopedResource() else { return }
         folderURL = url
         pageURLs = FolderAccess.enumerateImages(in: url)
-        buildSpreads()
+        pageSizes = pageURLs.map { Self.imageSize(for: $0) }
+        landscapeFlags = pageSizes.map { $0.width > $0.height }
+        portraitSequences = findPortraitSequences()
+        shiftedSequences = []
+        rebuildSpreads()
         currentSpreadIndex = 0
     }
 
@@ -80,37 +107,92 @@ class MangaBook {
         pageURLs = []
         spreads = []
         pageSizes = []
+        landscapeFlags = []
+        portraitSequences = []
+        shiftedSequences = []
+        spreadSequenceMap = []
         currentSpreadIndex = 0
     }
 
-    // MARK: - Smart spread layout
+    // MARK: - Spread building
 
-    private func buildSpreads() {
-        pageSizes = pageURLs.map { Self.imageSize(for: $0) }
-        var result: [SpreadLayout] = []
-        appendAutoSpreads(from: 0, to: &result)
-        spreads = result
-    }
-
-    /// Auto-detect and append spreads starting from page index `start`.
-    private func appendAutoSpreads(from start: Int, to result: inout [SpreadLayout]) {
-        var i = start
-        while i < pageURLs.count {
-            if isLandscape(pageSizes[i]) {
-                result.append(.single(i))
-                i += 1
-            } else if i + 1 < pageURLs.count, !isLandscape(pageSizes[i + 1]) {
-                result.append(.pair(i, i + 1))
-                i += 2
+    private func findPortraitSequences() -> [(start: Int, count: Int)] {
+        var sequences: [(start: Int, count: Int)] = []
+        var i = 0
+        while i < landscapeFlags.count {
+            if !landscapeFlags[i] {
+                let start = i
+                while i < landscapeFlags.count && !landscapeFlags[i] {
+                    i += 1
+                }
+                sequences.append((start: start, count: i - start))
             } else {
-                result.append(.single(i))
                 i += 1
             }
         }
+        return sequences
     }
 
-    private func isLandscape(_ size: CGSize) -> Bool {
-        size.width > size.height
+    private func rebuildSpreads() {
+        var result: [SpreadLayout] = []
+        var seqMap: [(seq: Int, local: Int)?] = []
+        var pageIdx = 0
+        var seqIdx = 0
+
+        while pageIdx < pageURLs.count {
+            if landscapeFlags[pageIdx] {
+                result.append(.single(pageIdx))
+                seqMap.append(nil)
+                pageIdx += 1
+            } else {
+                let seq = portraitSequences[seqIdx]
+                let shifted = shiftedSequences.contains(seqIdx)
+                let seqEnd = seq.start + seq.count
+                var i = seq.start
+                var localIdx = 0
+
+                if shifted {
+                    result.append(.single(i))
+                    seqMap.append((seq: seqIdx, local: localIdx))
+                    i += 1
+                    localIdx += 1
+                }
+
+                while i < seqEnd {
+                    if i + 1 < seqEnd {
+                        result.append(.pair(i, i + 1))
+                        seqMap.append((seq: seqIdx, local: localIdx))
+                        i += 2
+                    } else {
+                        result.append(.single(i))
+                        seqMap.append((seq: seqIdx, local: localIdx))
+                        i += 1
+                    }
+                    localIdx += 1
+                }
+
+                pageIdx = seqEnd
+                seqIdx += 1
+            }
+        }
+
+        spreads = result
+        spreadSequenceMap = seqMap
+    }
+
+    // MARK: - Helpers
+
+    private func firstSpreadIndex(forSequence seqIdx: Int) -> Int? {
+        for (i, m) in spreadSequenceMap.enumerated() {
+            if let m = m, m.seq == seqIdx {
+                return i
+            }
+        }
+        return nil
+    }
+
+    private func spreadCount(forSequence seqIdx: Int) -> Int {
+        spreadSequenceMap.compactMap { $0 }.filter { $0.seq == seqIdx }.count
     }
 
     static func imageSize(for url: URL) -> CGSize {

@@ -15,6 +15,7 @@ class MangaBook {
     var currentSpreadIndex: Int = 0
     private(set) var spreads: [SpreadLayout] = []
     private(set) var pageSizes: [CGSize] = []
+    var loadError: String?
 
     // Toggle support
     private var landscapeFlags: [Bool] = []
@@ -90,9 +91,18 @@ class MangaBook {
 
     func loadPages(from url: URL) {
         closeFolder()
+        loadError = nil
         guard url.startAccessingSecurityScopedResource() else { return }
         folderURL = url
         pageURLs = FolderAccess.enumerateImages(in: url)
+
+        let notDownloaded = FolderAccess.undownloadedICloudCount(in: pageURLs)
+        if notDownloaded > 0 {
+            loadError = "\(notDownloaded) file\(notDownloaded == 1 ? "" : "s") not downloaded from iCloud. Open the folder in Finder to download them first."
+            pageURLs = []
+            return
+        }
+
         pageSizes = pageURLs.map { Self.imageSize(for: $0) }
         landscapeFlags = pageSizes.map { $0.width > $0.height }
         portraitSequences = findPortraitSequences()
@@ -107,6 +117,7 @@ class MangaBook {
         pageURLs = []
         spreads = []
         pageSizes = []
+        loadError = nil
         landscapeFlags = []
         portraitSequences = []
         shiftedSequences = []

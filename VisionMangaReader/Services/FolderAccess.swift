@@ -45,4 +45,15 @@ enum FolderAccess {
     static func clearBookmark() {
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
     }
+
+    /// Count files not yet downloaded from iCloud. Returns 0 for non-iCloud folders.
+    static func undownloadedICloudCount(in urls: [URL]) -> Int {
+        urls.filter { url in
+            guard let values = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]),
+                  let status = values.ubiquitousItemDownloadingStatus else {
+                return false
+            }
+            return status == .notDownloaded
+        }.count
+    }
 }

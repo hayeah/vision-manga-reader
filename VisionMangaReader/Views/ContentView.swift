@@ -43,6 +43,11 @@ struct ContentView: View {
                     .foregroundStyle(.red)
             }
 
+            if let loadError = book.loadError {
+                Text(loadError)
+                    .foregroundStyle(.red)
+            }
+
             Button("Open Folder") {
                 showFilePicker = true
             }

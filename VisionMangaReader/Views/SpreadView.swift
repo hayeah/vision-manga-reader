@@ -7,6 +7,12 @@ struct SpreadView: View {
         var didTrigger = false
     }
 
+    private struct SubjectSelection {
+        let image: UIImage
+        let isLeftHalf: Bool
+        let triggerLocation: CGPoint
+    }
+
     @Bindable var book: MangaBook
 
     @State private var dragOffset: CGFloat = 0
@@ -20,6 +26,8 @@ struct SpreadView: View {
     @State private var isExtractingSubject = false
     @State private var suppressNavigationUntil = Date.distantPast
     @State private var pinchHolds: [SpatialEventCollection.Event.ID: PinchHoldState] = [:]
+    @State private var subjectSelection: SubjectSelection?
+    @State private var shimmerPhase: CGFloat = -1
 
     private var leftActive: Bool { leftHalfHovered || leftCaretHovered }
     private var rightActive: Bool { rightHalfHovered || rightCaretHovered }
@@ -33,7 +41,7 @@ struct SpreadView: View {
     }
 
     private func canNavigate() -> Bool {
-        Date() >= suppressNavigationUntil
+        Date() >= suppressNavigationUntil && subjectSelection == nil && !isExtractingSubject
     }
 
     private func targetPageIndex(forLeftHalf isLeftHalf: Bool) -> Int? {
@@ -58,7 +66,20 @@ struct SpreadView: View {
         }
     }
 
-    private func extractSubject(fromLeftHalf isLeftHalf: Bool) {
+    private func startShimmer() {
+        shimmerPhase = -1
+        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+            shimmerPhase = 1.4
+        }
+    }
+
+    private func clearSubjectSelection() {
+        subjectSelection = nil
+        shimmerPhase = -1
+    }
+
+    private func extractSubject(fromLeftHalf isLeftHalf: Bool, triggerLocation: CGPoint) {
+        guard subjectSelection == nil else { return }
         guard !isExtractingSubject else { return }
         guard let pageIndex = targetPageIndex(forLeftHalf: isLeftHalf),
               pageIndex >= 0, pageIndex < book.pageURLs.count else {
@@ -87,13 +108,115 @@ struct SpreadView: View {
                     showSubjectStatus("No subject detected")
                     return
                 }
-                SubjectExtractor.copyToClipboard(subjectImage)
-                showSubjectStatus("Subject copied to clipboard")
+                subjectSelection = SubjectSelection(
+                    image: subjectImage,
+                    isLeftHalf: isLeftHalf,
+                    triggerLocation: triggerLocation
+                )
+                showSubjectStatus("Subject selected")
+                startShimmer()
             }
         }
     }
 
+    private func menuPosition(for selection: SubjectSelection, in size: CGSize) -> CGPoint {
+        let xMargin: CGFloat = 150
+        let yMargin: CGFloat = 42
+        let preferred = CGPoint(x: selection.triggerLocation.x, y: selection.triggerLocation.y - 62)
+        return CGPoint(
+            x: min(max(preferred.x, xMargin), size.width - xMargin),
+            y: min(max(preferred.y, yMargin), size.height - yMargin)
+        )
+    }
+
+    @ViewBuilder
+    private func selectionImageView(_ selection: SubjectSelection, in size: CGSize) -> some View {
+        let pageImage = Image(uiImage: selection.image).resizable().aspectRatio(contentMode: .fit)
+
+        if pages.left != nil && pages.right != nil {
+            HStack(spacing: 0) {
+                if selection.isLeftHalf {
+                    pageImage
+                        .frame(width: size.width / 2, height: size.height, alignment: .trailing)
+                } else {
+                    Color.clear
+                        .frame(width: size.width / 2, height: size.height)
+                }
+
+                if selection.isLeftHalf {
+                    Color.clear
+                        .frame(width: size.width / 2, height: size.height)
+                } else {
+                    pageImage
+                        .frame(width: size.width / 2, height: size.height, alignment: .leading)
+                }
+            }
+        } else {
+            pageImage
+                .frame(width: size.width, height: size.height, alignment: .center)
+        }
+    }
+
+    @ViewBuilder
+    private func subjectSelectionOverlay(in size: CGSize) -> some View {
+        if let selection = subjectSelection {
+            let shimmerTravel = size.width + 280
+            let shimmerOffset = (shimmerTravel * shimmerPhase) - (shimmerTravel / 2)
+
+            selectionImageView(selection, in: size)
+                .colorMultiply(.yellow)
+                .opacity(0.20)
+                .allowsHitTesting(false)
+
+            selectionImageView(selection, in: size)
+                .overlay {
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.95), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(width: 240)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: shimmerOffset)
+                }
+                .mask(selectionImageView(selection, in: size))
+                .opacity(0.8)
+                .allowsHitTesting(false)
+        }
+    }
+
+    @ViewBuilder
+    private func subjectActionMenu(in size: CGSize) -> some View {
+        if let selection = subjectSelection {
+            let menuPosition = menuPosition(for: selection, in: size)
+            HStack(spacing: 8) {
+                Button {
+                    SubjectExtractor.copyToClipboard(selection.image)
+                    showSubjectStatus("Subject copied to clipboard")
+                    clearSubjectSelection()
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    clearSubjectSelection()
+                    showSubjectStatus("Selection cleared")
+                } label: {
+                    Label("Dismiss", systemImage: "xmark")
+                }
+                .buttonStyle(.bordered)
+            }
+            .labelStyle(.titleAndIcon)
+            .padding(10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .position(x: menuPosition.x, y: menuPosition.y)
+        }
+    }
+
     private func handleSpatialEvents(_ events: SpatialEventCollection, size: CGSize) {
+        guard subjectSelection == nil else { return }
+
         for event in events {
             let isPinchEvent: Bool
             switch event.kind {
@@ -117,7 +240,10 @@ struct SpreadView: View {
 
                 if !hold.didTrigger, heldLongEnough, travel <= 40 {
                     hold.didTrigger = true
-                    extractSubject(fromLeftHalf: event.location.x < (size.width / 2))
+                    extractSubject(
+                        fromLeftHalf: event.location.x < (size.width / 2),
+                        triggerLocation: event.location
+                    )
                 }
                 pinchHolds[event.id] = hold
 
@@ -132,9 +258,17 @@ struct SpreadView: View {
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 50)
             .onChanged { value in
+                guard canNavigate() else {
+                    dragOffset = 0
+                    return
+                }
                 dragOffset = value.translation.width * 0.3
             }
             .onEnded { value in
+                guard canNavigate() else {
+                    dragOffset = 0
+                    return
+                }
                 let threshold: CGFloat = 100
                 withAnimation(.easeInOut(duration: 0.25)) {
                     if value.translation.width > threshold {
@@ -226,6 +360,7 @@ struct SpreadView: View {
                 // Caret buttons — font color highlight, no background glow
                 if m.left > 0 {
                     Button {
+                        guard canNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.nextSpread()
                         }
@@ -246,6 +381,7 @@ struct SpreadView: View {
 
                 if m.right > 0 {
                     Button {
+                        guard canNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.previousSpread()
                         }
@@ -263,6 +399,9 @@ struct SpreadView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .animation(.easeInOut(duration: 0.2), value: rightActive)
                 }
+
+                subjectSelectionOverlay(in: geo.size)
+                subjectActionMenu(in: geo.size)
 
                 if let subjectStatusMessage {
                     Text(subjectStatusMessage)
@@ -291,9 +430,13 @@ struct SpreadView: View {
         .animation(isSinglePage != wasSinglePage ? nil : .easeInOut(duration: 0.25), value: book.currentSpreadIndex)
         .onChange(of: book.currentSpreadIndex) {
             wasSinglePage = isSinglePage
+            clearSubjectSelection()
+            pinchHolds = [:]
         }
         .onDisappear {
             subjectStatusTask?.cancel()
+            pinchHolds = [:]
+            clearSubjectSelection()
         }
     }
 }

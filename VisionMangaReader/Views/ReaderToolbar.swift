@@ -18,27 +18,10 @@ struct ReaderToolbar: View {
 
             Spacer()
 
-            // Navigation + page indicator
-            HStack(spacing: 12) {
-                Button {
-                    book.previousSpread()
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                .disabled(book.currentSpreadIndex <= 0)
-
-                if book.spreadCount > 0 {
-                    Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-
-                Button {
-                    book.nextSpread()
-                } label: {
-                    Image(systemName: "chevron.right")
-                }
-                .disabled(book.currentSpreadIndex >= book.spreadCount - 1)
+            if book.spreadCount > 0 {
+                Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

@@ -17,6 +17,7 @@
 		B10000000000000000000008 /* PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* PageView.swift */; };
 		B10000000000000000000009 /* ReaderToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* ReaderToolbar.swift */; };
 		B1000000000000000000000A /* SpreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000A /* SpreadView.swift */; };
+		B1000000000000000000000B /* SubjectExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* SubjectExtractor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		A10000000000000000000009 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
 		A1000000000000000000000A /* SpreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadView.swift; sourceTree = "<group>"; };
 		A1000000000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000000000000000000000C /* SubjectExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectExtractor.swift; sourceTree = "<group>"; };
 		D10000000000000000000002 /* VisionMangaReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VisionMangaReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -79,6 +81,7 @@
 			children = (
 				A10000000000000000000004 /* FolderAccess.swift */,
 				A10000000000000000000005 /* ImageLoader.swift */,
+				A1000000000000000000000C /* SubjectExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -181,6 +184,7 @@
 				B10000000000000000000008 /* PageView.swift in Sources */,
 				B10000000000000000000009 /* ReaderToolbar.swift in Sources */,
 				B1000000000000000000000A /* SpreadView.swift in Sources */,
+				B1000000000000000000000B /* SubjectExtractor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

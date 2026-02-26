@@ -9,6 +9,10 @@ struct SpreadView: View {
     @State private var leftCaretHovered = false
     @State private var rightHalfHovered = false
     @State private var rightCaretHovered = false
+    @State private var subjectStatusMessage: String?
+    @State private var subjectStatusTask: Task<Void, Never>?
+    @State private var isExtractingSubject = false
+    @State private var suppressNavigationUntil = Date.distantPast
 
     private var leftActive: Bool { leftHalfHovered || leftCaretHovered }
     private var rightActive: Bool { rightHalfHovered || rightCaretHovered }
@@ -19,6 +23,67 @@ struct SpreadView: View {
 
     private var isSinglePage: Bool {
         pages.right != nil && pages.left == nil
+    }
+
+    private func canNavigate() -> Bool {
+        Date() >= suppressNavigationUntil
+    }
+
+    private func targetPageIndex(forLeftHalf isLeftHalf: Bool) -> Int? {
+        if let leftIdx = pages.left, let rightIdx = pages.right {
+            return isLeftHalf ? leftIdx : rightIdx
+        }
+        return pages.right ?? pages.left
+    }
+
+    private func showSubjectStatus(_ message: String, autoHide: Bool = true) {
+        subjectStatusTask?.cancel()
+        subjectStatusMessage = message
+        guard autoHide else { return }
+
+        subjectStatusTask = Task { [message] in
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            await MainActor.run {
+                if subjectStatusMessage == message {
+                    subjectStatusMessage = nil
+                }
+            }
+        }
+    }
+
+    private func extractSubject(fromLeftHalf isLeftHalf: Bool) {
+        guard !isExtractingSubject else { return }
+        guard let pageIndex = targetPageIndex(forLeftHalf: isLeftHalf),
+              pageIndex >= 0, pageIndex < book.pageURLs.count else {
+            showSubjectStatus("No page available")
+            return
+        }
+
+        suppressNavigationUntil = Date().addingTimeInterval(0.35)
+        isExtractingSubject = true
+        showSubjectStatus("Extracting subject...", autoHide: false)
+
+        let pageURL = book.pageURLs[pageIndex]
+        Task {
+            guard let image = await ImageLoader.shared.load(url: pageURL) else {
+                await MainActor.run {
+                    isExtractingSubject = false
+                    showSubjectStatus("Failed to load page")
+                }
+                return
+            }
+
+            let subjectImage = await SubjectExtractor.extractSubject(from: image)
+            await MainActor.run {
+                isExtractingSubject = false
+                guard let subjectImage else {
+                    showSubjectStatus("No subject detected")
+                    return
+                }
+                SubjectExtractor.copyToClipboard(subjectImage)
+                showSubjectStatus("Subject copied to clipboard")
+            }
+        }
     }
 
     private var swipeGesture: some Gesture {
@@ -91,6 +156,7 @@ struct SpreadView: View {
                 // Invisible buttons for tap sound; hover drives caret opacity
                 HStack(spacing: 0) {
                     Button {
+                        guard canNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.nextSpread()
                         }
@@ -100,9 +166,12 @@ struct SpreadView: View {
                     .buttonStyle(.plain)
                     .hoverEffectDisabled()
                     .onHover { leftHalfHovered = $0 }
-                    .disabled(book.currentSpreadIndex >= book.spreadCount - 1)
+                    .onLongPressGesture(minimumDuration: 0.75, maximumDistance: 25) {
+                        extractSubject(fromLeftHalf: true)
+                    }
 
                     Button {
+                        guard canNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.previousSpread()
                         }
@@ -112,7 +181,9 @@ struct SpreadView: View {
                     .buttonStyle(.plain)
                     .hoverEffectDisabled()
                     .onHover { rightHalfHovered = $0 }
-                    .disabled(book.currentSpreadIndex <= 0)
+                    .onLongPressGesture(minimumDuration: 0.75, maximumDistance: 25) {
+                        extractSubject(fromLeftHalf: false)
+                    }
                 }
 
                 // Caret buttons — font color highlight, no background glow
@@ -155,6 +226,17 @@ struct SpreadView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .animation(.easeInOut(duration: 0.2), value: rightActive)
                 }
+
+                if let subjectStatusMessage {
+                    Text(subjectStatusMessage)
+                        .font(.footnote)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(.top, 12)
+                        .allowsHitTesting(false)
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .simultaneousGesture(swipeGesture)
@@ -163,6 +245,9 @@ struct SpreadView: View {
         .animation(isSinglePage != wasSinglePage ? nil : .easeInOut(duration: 0.25), value: book.currentSpreadIndex)
         .onChange(of: book.currentSpreadIndex) {
             wasSinglePage = isSinglePage
+        }
+        .onDisappear {
+            subjectStatusTask?.cancel()
         }
     }
 }

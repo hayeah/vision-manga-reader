@@ -1,10 +1,18 @@
 import SwiftUI
 
 struct SpreadView: View {
+    // Drag scrub mode is currently the primary pinch interaction.
+    // Set to `true` if you want long-pinch subject selection back.
+    private let longPinchSubjectSelectionEnabled = false
+
     private struct PinchHoldState {
         var startTimestamp: TimeInterval
         var startLocation: CGPoint
+        var startSpreadIndex: Int
+        var didScrub = false
         var didTrigger = false
+        var maxAbsDx: CGFloat = 0
+        var maxTravel: CGFloat = 0
     }
 
     private struct SubjectSelection {
@@ -16,7 +24,6 @@ struct SpreadView: View {
 
     @Bindable var book: MangaBook
 
-    @State private var dragOffset: CGFloat = 0
     @State private var wasSinglePage: Bool = false
     @State private var leftHalfHovered = false
     @State private var leftCaretHovered = false
@@ -26,7 +33,9 @@ struct SpreadView: View {
     @State private var subjectStatusTask: Task<Void, Never>?
     @State private var isExtractingSubject = false
     @State private var suppressNavigationUntil = Date.distantPast
+    @State private var suppressTapNavigationUntil = Date.distantPast
     @State private var pinchHolds: [SpatialEventCollection.Event.ID: PinchHoldState] = [:]
+    @State private var sessionMaxAbsDx: CGFloat = 0
     @State private var subjectSelection: SubjectSelection?
     @State private var shimmerPhase: CGFloat = -1
 
@@ -43,6 +52,61 @@ struct SpreadView: View {
 
     private func canNavigate() -> Bool {
         Date() >= suppressNavigationUntil && subjectSelection == nil && !isExtractingSubject
+    }
+
+    private func canTapNavigate() -> Bool {
+        canNavigate() && Date() >= suppressTapNavigationUntil
+    }
+
+    private func canSwipeNavigate() -> Bool {
+        canTapNavigate() && pinchHolds.isEmpty
+    }
+
+    private func suppressTapNavigation(for duration: TimeInterval = 0.28) {
+        let until = Date().addingTimeInterval(duration)
+        if until > suppressTapNavigationUntil {
+            suppressTapNavigationUntil = until
+        }
+    }
+
+    private func scrubMagnitude(forDistance distance: CGFloat) -> Int {
+        // Tuned in local points from observed dx values:
+        // short-ish drags are about 20~100pt, long drags can reach ~1000pt.
+        let d = max(0, distance)
+        if d < 14 { return 0 }
+
+        // Gentle zone: keep short drags controllable.
+        if d <= 100 {
+            let t = (d - 14) / 86 // 0...1 over 14...100
+            let pages = 1 + (2 * pow(t, 0.9))
+            return max(1, Int(pages.rounded(.toNearestOrAwayFromZero)))
+        }
+
+        // Acceleration zone: ramps much harder across larger drags.
+        if d <= 1000 {
+            let t = (d - 100) / 900 // 0...1 over 100...1000
+            let extra = 45 * pow(t, 1.8)
+            return 3 + Int(extra.rounded(.toNearestOrAwayFromZero))
+        }
+
+        // Very long tails keep accelerating, but more gradually.
+        let tail = (d - 1000) / 300
+        let extra = 12 * pow(max(0, tail), 1.4)
+        return 48 + Int(extra.rounded(.toNearestOrAwayFromZero))
+    }
+
+    private func logScrubMetrics(_ hold: PinchHoldState, size: CGSize) {
+        let maxPages = scrubMagnitude(forDistance: hold.maxAbsDx)
+        print(
+            String(
+                format: "[SpreadView] pinch scrub maxAbsDx=%.1f maxTravel=%.1f maxPages=%d sessionMaxAbsDx=%.1f width=%.1f",
+                Double(hold.maxAbsDx),
+                Double(hold.maxTravel),
+                maxPages,
+                Double(sessionMaxAbsDx),
+                Double(size.width)
+            )
+        )
     }
 
     private func targetPageIndex(forLeftHalf isLeftHalf: Bool) -> Int? {
@@ -297,14 +361,39 @@ struct SpreadView: View {
             case .active:
                 var hold = pinchHolds[event.id] ?? PinchHoldState(
                     startTimestamp: event.timestamp,
-                    startLocation: event.location
+                    startLocation: event.location,
+                    startSpreadIndex: book.currentSpreadIndex
                 )
                 let dx = event.location.x - hold.startLocation.x
                 let dy = event.location.y - hold.startLocation.y
                 let travel = sqrt(dx * dx + dy * dy)
+                hold.maxAbsDx = max(hold.maxAbsDx, abs(dx))
+                hold.maxTravel = max(hold.maxTravel, travel)
                 let heldLongEnough = (event.timestamp - hold.startTimestamp) >= 0.75
+                let scrubActivation: CGFloat = 14
 
-                if !hold.didTrigger, heldLongEnough, travel <= 40 {
+                if canNavigate(), abs(dx) >= scrubActivation {
+                    hold.didScrub = true
+                }
+
+                if canNavigate(), hold.didScrub {
+                    suppressTapNavigation(for: 0.24)
+                    // Pinch-scrub pages by horizontal drag distance in points.
+                    // 20~30pt stays gentle, 50~60pt ramps aggressively.
+                    let distance = abs(dx)
+                    let magnitude = scrubMagnitude(forDistance: distance)
+                    let delta = dx < 0 ? magnitude : -magnitude
+                    let target = min(max(0, hold.startSpreadIndex + delta), max(0, book.spreadCount - 1))
+                    if target != book.currentSpreadIndex {
+                        book.currentSpreadIndex = target
+                    }
+                }
+
+                if longPinchSubjectSelectionEnabled,
+                   !hold.didScrub,
+                   !hold.didTrigger,
+                   heldLongEnough,
+                   travel <= 40 {
                     hold.didTrigger = true
                     extractSubject(
                         fromLeftHalf: event.location.x < (size.width / 2),
@@ -315,6 +404,11 @@ struct SpreadView: View {
                 pinchHolds[event.id] = hold
 
             case .ended, .cancelled:
+                if let hold = pinchHolds[event.id], hold.didScrub {
+                    sessionMaxAbsDx = max(sessionMaxAbsDx, hold.maxAbsDx)
+                    logScrubMetrics(hold, size: size)
+                    suppressTapNavigation(for: 0.35)
+                }
                 pinchHolds.removeValue(forKey: event.id)
             @unknown default:
                 pinchHolds.removeValue(forKey: event.id)
@@ -324,18 +418,8 @@ struct SpreadView: View {
 
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 50)
-            .onChanged { value in
-                guard canNavigate() else {
-                    dragOffset = 0
-                    return
-                }
-                dragOffset = value.translation.width * 0.3
-            }
             .onEnded { value in
-                guard canNavigate() else {
-                    dragOffset = 0
-                    return
-                }
+                guard canSwipeNavigate() else { return }
                 let threshold: CGFloat = 100
                 withAnimation(.easeInOut(duration: 0.25)) {
                     if value.translation.width > threshold {
@@ -343,7 +427,6 @@ struct SpreadView: View {
                     } else if value.translation.width < -threshold {
                         book.previousSpread()
                     }
-                    dragOffset = 0
                 }
             }
     }
@@ -394,13 +477,12 @@ struct SpreadView: View {
                             .clipped()
                     }
                 }
-                .offset(x: dragOffset)
 
                 // Full-half tap buttons (RTL: left=next, right=prev)
                 // Invisible buttons for tap sound; hover drives caret opacity
                 HStack(spacing: 0) {
                     Button {
-                        guard canNavigate() else { return }
+                        guard canTapNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.nextSpread()
                         }
@@ -412,7 +494,7 @@ struct SpreadView: View {
                     .onHover { leftHalfHovered = $0 }
 
                     Button {
-                        guard canNavigate() else { return }
+                        guard canTapNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.previousSpread()
                         }
@@ -427,7 +509,7 @@ struct SpreadView: View {
                 // Caret buttons — font color highlight, no background glow
                 if m.left > 0 {
                     Button {
-                        guard canNavigate() else { return }
+                        guard canTapNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.nextSpread()
                         }
@@ -448,7 +530,7 @@ struct SpreadView: View {
 
                 if m.right > 0 {
                     Button {
-                        guard canNavigate() else { return }
+                        guard canTapNavigate() else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
                             book.previousSpread()
                         }
@@ -498,7 +580,6 @@ struct SpreadView: View {
         .onChange(of: book.currentSpreadIndex) {
             wasSinglePage = isSinglePage
             clearSubjectSelection()
-            pinchHolds = [:]
         }
         .onDisappear {
             subjectStatusTask?.cancel()

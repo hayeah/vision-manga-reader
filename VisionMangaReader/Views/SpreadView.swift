@@ -21,6 +21,24 @@ struct SpreadView: View {
         pages.right != nil && pages.left == nil
     }
 
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 50)
+            .onChanged { value in
+                dragOffset = value.translation.width * 0.3
+            }
+            .onEnded { value in
+                let threshold: CGFloat = 100
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    if value.translation.width > threshold {
+                        book.nextSpread()
+                    } else if value.translation.width < -threshold {
+                        book.previousSpread()
+                    }
+                    dragOffset = 0
+                }
+            }
+    }
+
     /// Compute the blank margin widths on left and right edges of the window.
     private func margins(in size: CGSize) -> (left: CGFloat, right: CGFloat) {
         let slotWidth = isSinglePage ? size.width : size.width / 2
@@ -68,23 +86,6 @@ struct SpreadView: View {
                     }
                 }
                 .offset(x: dragOffset)
-                .gesture(
-                    DragGesture(minimumDistance: 50)
-                        .onChanged { value in
-                            dragOffset = value.translation.width * 0.3
-                        }
-                        .onEnded { value in
-                            let threshold: CGFloat = 100
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                if value.translation.width > threshold {
-                                    book.nextSpread()
-                                } else if value.translation.width < -threshold {
-                                    book.previousSpread()
-                                }
-                                dragOffset = 0
-                            }
-                        }
-                )
 
                 // Full-half tap buttons (RTL: left=next, right=prev)
                 // Invisible buttons for tap sound; hover drives caret opacity
@@ -156,6 +157,7 @@ struct SpreadView: View {
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .simultaneousGesture(swipeGesture)
         }
         .background(.black)
         .animation(isSinglePage != wasSinglePage ? nil : .easeInOut(duration: 0.25), value: book.currentSpreadIndex)

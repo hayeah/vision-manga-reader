@@ -1,6 +1,12 @@
 import SwiftUI
 
 struct SpreadView: View {
+    private struct PinchHoldState {
+        var startTimestamp: TimeInterval
+        var startLocation: CGPoint
+        var didTrigger = false
+    }
+
     @Bindable var book: MangaBook
 
     @State private var dragOffset: CGFloat = 0
@@ -13,6 +19,7 @@ struct SpreadView: View {
     @State private var subjectStatusTask: Task<Void, Never>?
     @State private var isExtractingSubject = false
     @State private var suppressNavigationUntil = Date.distantPast
+    @State private var pinchHolds: [SpatialEventCollection.Event.ID: PinchHoldState] = [:]
 
     private var leftActive: Bool { leftHalfHovered || leftCaretHovered }
     private var rightActive: Bool { rightHalfHovered || rightCaretHovered }
@@ -82,6 +89,42 @@ struct SpreadView: View {
                 }
                 SubjectExtractor.copyToClipboard(subjectImage)
                 showSubjectStatus("Subject copied to clipboard")
+            }
+        }
+    }
+
+    private func handleSpatialEvents(_ events: SpatialEventCollection, size: CGSize) {
+        for event in events {
+            let isPinchEvent: Bool
+            switch event.kind {
+            case .directPinch, .indirectPinch:
+                isPinchEvent = true
+            default:
+                isPinchEvent = false
+            }
+            guard isPinchEvent else { continue }
+
+            switch event.phase {
+            case .active:
+                var hold = pinchHolds[event.id] ?? PinchHoldState(
+                    startTimestamp: event.timestamp,
+                    startLocation: event.location
+                )
+                let dx = event.location.x - hold.startLocation.x
+                let dy = event.location.y - hold.startLocation.y
+                let travel = sqrt(dx * dx + dy * dy)
+                let heldLongEnough = (event.timestamp - hold.startTimestamp) >= 0.75
+
+                if !hold.didTrigger, heldLongEnough, travel <= 40 {
+                    hold.didTrigger = true
+                    extractSubject(fromLeftHalf: event.location.x < (size.width / 2))
+                }
+                pinchHolds[event.id] = hold
+
+            case .ended, .cancelled:
+                pinchHolds.removeValue(forKey: event.id)
+            @unknown default:
+                pinchHolds.removeValue(forKey: event.id)
             }
         }
     }
@@ -166,9 +209,6 @@ struct SpreadView: View {
                     .buttonStyle(.plain)
                     .hoverEffectDisabled()
                     .onHover { leftHalfHovered = $0 }
-                    .onLongPressGesture(minimumDuration: 0.75, maximumDistance: 25) {
-                        extractSubject(fromLeftHalf: true)
-                    }
 
                     Button {
                         guard canNavigate() else { return }
@@ -181,9 +221,6 @@ struct SpreadView: View {
                     .buttonStyle(.plain)
                     .hoverEffectDisabled()
                     .onHover { rightHalfHovered = $0 }
-                    .onLongPressGesture(minimumDuration: 0.75, maximumDistance: 25) {
-                        extractSubject(fromLeftHalf: false)
-                    }
                 }
 
                 // Caret buttons — font color highlight, no background glow
@@ -240,6 +277,15 @@ struct SpreadView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .simultaneousGesture(swipeGesture)
+            .simultaneousGesture(
+                SpatialEventGesture(coordinateSpace: .local)
+                    .onChanged { events in
+                        handleSpatialEvents(events, size: geo.size)
+                    }
+                    .onEnded { events in
+                        handleSpatialEvents(events, size: geo.size)
+                    }
+            )
         }
         .background(.black)
         .animation(isSinglePage != wasSinglePage ? nil : .easeInOut(duration: 0.25), value: book.currentSpreadIndex)

@@ -8,7 +8,8 @@ struct SpreadView: View {
     }
 
     private struct SubjectSelection {
-        let image: UIImage
+        let overlayImage: UIImage
+        let copiedImage: UIImage
         let isLeftHalf: Bool
         let triggerLocation: CGPoint
     }
@@ -78,12 +79,71 @@ struct SpreadView: View {
         shimmerPhase = -1
     }
 
-    private func extractSubject(fromLeftHalf isLeftHalf: Bool, triggerLocation: CGPoint) {
+    private func pageRect(forLeftHalf isLeftHalf: Bool, in size: CGSize) -> CGRect? {
+        guard let pageIndex = targetPageIndex(forLeftHalf: isLeftHalf),
+              pageIndex >= 0, pageIndex < book.pageSizes.count else {
+            return nil
+        }
+
+        let pageSize = book.pageSizes[pageIndex]
+        guard pageSize.width > 0, pageSize.height > 0 else { return nil }
+
+        let slotWidth = isSinglePage ? size.width : size.width / 2
+        let aspect = pageSize.width / pageSize.height
+        let renderedWidth = min(slotWidth, aspect * size.height)
+        let renderedHeight = min(size.height, slotWidth / aspect)
+        let y = (size.height - renderedHeight) / 2
+
+        if isSinglePage {
+            let x = (size.width - renderedWidth) / 2
+            return CGRect(x: x, y: y, width: renderedWidth, height: renderedHeight)
+        }
+
+        if isLeftHalf {
+            let x = slotWidth - renderedWidth // trailing in left slot
+            return CGRect(x: x, y: y, width: renderedWidth, height: renderedHeight)
+        } else {
+            let x = slotWidth // leading in right slot
+            return CGRect(x: x, y: y, width: renderedWidth, height: renderedHeight)
+        }
+    }
+
+    private func normalizedPinchPoint(
+        forLeftHalf isLeftHalf: Bool,
+        triggerLocation: CGPoint,
+        in size: CGSize
+    ) -> CGPoint? {
+        guard let rect = pageRect(forLeftHalf: isLeftHalf, in: size),
+              rect.contains(triggerLocation),
+              rect.width > 0,
+              rect.height > 0 else {
+            return nil
+        }
+
+        let x = (triggerLocation.x - rect.minX) / rect.width
+        let yTopOrigin = (triggerLocation.y - rect.minY) / rect.height
+        let y = 1 - yTopOrigin // Vision normalized point uses lower-left origin
+
+        return CGPoint(
+            x: min(max(x, 0), 1),
+            y: min(max(y, 0), 1)
+        )
+    }
+
+    private func extractSubject(fromLeftHalf isLeftHalf: Bool, triggerLocation: CGPoint, in size: CGSize) {
         guard subjectSelection == nil else { return }
         guard !isExtractingSubject else { return }
         guard let pageIndex = targetPageIndex(forLeftHalf: isLeftHalf),
               pageIndex >= 0, pageIndex < book.pageURLs.count else {
             showSubjectStatus("No page available")
+            return
+        }
+        guard let pinchPoint = normalizedPinchPoint(
+            forLeftHalf: isLeftHalf,
+            triggerLocation: triggerLocation,
+            in: size
+        ) else {
+            showSubjectStatus("Pinch on the page image to select")
             return
         }
 
@@ -101,15 +161,21 @@ struct SpreadView: View {
                 return
             }
 
-            let subjectImage = await SubjectExtractor.extractSubject(from: image)
+            let subjectImage = await SubjectExtractor.extractSubject(
+                from: image,
+                at: pinchPoint,
+                trimOutput: false
+            )
             await MainActor.run {
                 isExtractingSubject = false
                 guard let subjectImage else {
                     showSubjectStatus("No subject detected")
                     return
                 }
+                let copiedImage = SubjectExtractor.trimmedSubjectImage(from: subjectImage)
                 subjectSelection = SubjectSelection(
-                    image: subjectImage,
+                    overlayImage: subjectImage,
+                    copiedImage: copiedImage,
                     isLeftHalf: isLeftHalf,
                     triggerLocation: triggerLocation
                 )
@@ -131,7 +197,7 @@ struct SpreadView: View {
 
     @ViewBuilder
     private func selectionImageView(_ selection: SubjectSelection, in size: CGSize) -> some View {
-        let pageImage = Image(uiImage: selection.image).resizable().aspectRatio(contentMode: .fit)
+        let pageImage = Image(uiImage: selection.overlayImage).resizable().aspectRatio(contentMode: .fit)
 
         if pages.left != nil && pages.right != nil {
             HStack(spacing: 0) {
@@ -191,7 +257,7 @@ struct SpreadView: View {
             let menuPosition = menuPosition(for: selection, in: size)
             HStack(spacing: 8) {
                 Button {
-                    SubjectExtractor.copyToClipboard(selection.image)
+                    SubjectExtractor.copyToClipboard(selection.copiedImage)
                     showSubjectStatus("Subject copied to clipboard")
                     clearSubjectSelection()
                 } label: {
@@ -242,7 +308,8 @@ struct SpreadView: View {
                     hold.didTrigger = true
                     extractSubject(
                         fromLeftHalf: event.location.x < (size.width / 2),
-                        triggerLocation: event.location
+                        triggerLocation: event.location,
+                        in: size
                     )
                 }
                 pinchHolds[event.id] = hold

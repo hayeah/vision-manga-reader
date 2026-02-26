@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SpreadView: View {
-    // Drag scrub mode is currently the primary pinch interaction.
-    // Set to `true` if you want long-pinch subject selection back.
-    private let longPinchSubjectSelectionEnabled = false
+    // Keep long-pinch subject selection available when the pinch is stationary.
+    // Subject selection is still suppressed automatically once scrubbing starts.
+    private let longPinchSubjectSelectionEnabled = true
 
     private struct PinchHoldState {
         var startTimestamp: TimeInterval

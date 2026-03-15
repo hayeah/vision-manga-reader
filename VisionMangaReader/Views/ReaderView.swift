@@ -5,11 +5,51 @@ enum OrnamentPanel {
     case volumes
 }
 
+struct PanelListRowButton<Accessory: View>: View {
+    let title: String
+    let isCurrent: Bool
+    let verticalPadding: CGFloat
+    let action: () -> Void
+    @ViewBuilder let accessory: () -> Accessory
+
+    private let cornerRadius: CGFloat = 3
+
+    private var rowShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Text(title)
+                    .lineLimit(1)
+                    .font(.callout)
+                    .foregroundStyle(isCurrent ? .primary : .secondary)
+
+                Spacer(minLength: 0)
+
+                accessory()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, verticalPadding)
+            .contentShape(rowShape)
+            .background(isCurrent ? .white.opacity(0.14) : .clear, in: rowShape)
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .clipShape(rowShape)
+    }
+}
+
 struct ReaderView: View {
     var appState: AppState
     var windowID: UUID
     @Bindable var book: MangaBook
     @Binding var currentVolumeID: String?
+
+    private let panelOrnamentTrailingInset: CGFloat = 84
+    private let panelMaxWidth: CGFloat = 320
+    private let panelMaxHeight: CGFloat = 420
 
     @State private var showEndOfVolumePrompt = false
     @State private var expandedPanel: OrnamentPanel?
@@ -34,8 +74,15 @@ struct ReaderView: View {
                     .padding(.bottom, 16)
             }
         }
+        .ornament(
+            visibility: expandedPanel == nil ? .hidden : .visible,
+            attachmentAnchor: .scene(.leading),
+            contentAlignment: .trailing
+        ) {
+            panelOrnament
+        }
         .ornament(visibility: .automatic, attachmentAnchor: .scene(.leading), contentAlignment: .trailing) {
-            ornamentContent
+            ornamentButtons
         }
         .onChange(of: book.currentSpreadIndex) { _, newIndex in
             guard let currentVolumeID else { return }
@@ -73,84 +120,62 @@ struct ReaderView: View {
         )
     }
 
-    private var ornamentContent: some View {
-        HStack(alignment: .top, spacing: 0) {
-            if let expandedPanel {
-                switch expandedPanel {
-                case .series:
-                    seriesPanel
-                case .volumes:
-                    volumesPanel
-                }
+    private var panelOrnament: some View {
+        Group {
+            switch expandedPanel {
+            case .series:
+                seriesPanel
+            case .volumes:
+                volumesPanel
+            case nil:
+                EmptyView()
             }
-
-            ornamentButtons
         }
-        .fixedSize(horizontal: false, vertical: true)
         .glassBackgroundEffect()
+        .padding(.trailing, panelOrnamentTrailingInset)
     }
 
     private var seriesPanel: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(library.series) { s in
                     let isCurrent = currentSeriesID == s.id
-                    Button {
-                        openSeries(s)
-                    } label: {
-                        Text(s.title)
-                            .lineLimit(1)
-                            .foregroundStyle(isCurrent ? .primary : .secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            isCurrent ? Color.accentColor.opacity(0.15) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 6)
-                        )
+                    PanelListRowButton(
+                        title: s.title,
+                        isCurrent: isCurrent,
+                        verticalPadding: 8,
+                        action: { openSeries(s) }
+                    ) {
+                        EmptyView()
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 20)
         }
-        .frame(width: 240, alignment: .top)
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: panelMaxWidth, maxHeight: panelMaxHeight, alignment: .topLeading)
     }
 
     private var volumesPanel: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     if let currentSeries {
                         ForEach(currentSeries.volumes) { vol in
                             let isCurrent = vol.id == currentVolumeID
-                            Button {
-                                openVolume(vol)
-                            } label: {
-                                HStack {
-                                    Text(vol.title)
-                                        .lineLimit(1)
-                                        .font(.callout)
-                                        .foregroundStyle(isCurrent ? .primary : .secondary)
-
-                                    Spacer()
-
-                                    if let prog = library.history.progress[vol.id] {
-                                        if prog.isCompleted {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundStyle(.green)
-                                                .font(.caption)
-                                        }
-                                    }
+                            PanelListRowButton(
+                                title: vol.title,
+                                isCurrent: isCurrent,
+                                verticalPadding: 6,
+                                action: { openVolume(vol) }
+                            ) {
+                                if let prog = library.history.progress[vol.id], prog.isCompleted {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                        .font(.caption)
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    isCurrent ? Color.accentColor.opacity(0.15) : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: 6)
-                                )
                             }
-                            .buttonStyle(.plain)
                             .id(vol.id)
                         }
                     }
@@ -158,7 +183,8 @@ struct ReaderView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 20)
             }
-            .frame(width: 200, alignment: .top)
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(maxWidth: panelMaxWidth, maxHeight: panelMaxHeight, alignment: .topLeading)
             .onAppear {
                 if let currentVolumeID {
                     proxy.scrollTo(currentVolumeID, anchor: .center)
@@ -202,6 +228,7 @@ struct ReaderView: View {
         }
         .labelStyle(.iconOnly)
         .padding(8)
+        .glassBackgroundEffect()
     }
 
     // MARK: - End of volume prompt

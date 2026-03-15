@@ -69,6 +69,10 @@ private struct ReaderPreview: View {
     @State private var book = previewBook()
     @State private var expandedPanel: OrnamentPanel?
 
+    private let panelOverlayTrailingInset: CGFloat = 84
+    private let panelMaxWidth: CGFloat = 320
+    private let panelMaxHeight: CGFloat = 420
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             SpreadView(book: book)
@@ -84,26 +88,52 @@ private struct ReaderPreview: View {
         }
         // Ornaments don't render in canvas previews — simulate as overlay.
         .overlay(alignment: .leading) {
-            HStack(spacing: 0) {
+            ZStack(alignment: .leading) {
                 if expandedPanel == .volumes {
                     ScrollView {
-                        VStack(spacing: 4) {
+                        VStack(alignment: .leading, spacing: 4) {
                             ForEach(previewVolumes()) { vol in
-                                Button { } label: {
-                                    Text(vol.title)
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
+                                PanelListRowButton(
+                                    title: vol.title,
+                                    isCurrent: vol.id == previewVolumes().first?.id,
+                                    verticalPadding: 6,
+                                    action: {}
+                                ) {
+                                    EmptyView()
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                         .padding(8)
                     }
-                    .frame(width: 200).frame(maxHeight: 400)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: panelMaxWidth, maxHeight: panelMaxHeight)
+                    .glassBackgroundEffect()
+                    .padding(.leading, 8)
+                    .padding(.trailing, panelOverlayTrailingInset)
+                } else if expandedPanel == .series {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(["Series A", "Series B", "Series C"], id: \.self) { title in
+                                PanelListRowButton(
+                                    title: title,
+                                    isCurrent: title == "Series A",
+                                    verticalPadding: 8,
+                                    action: {}
+                                ) {
+                                    EmptyView()
+                                }
+                            }
+                        }
+                        .padding(8)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: panelMaxWidth, maxHeight: panelMaxHeight)
+                    .glassBackgroundEffect()
+                    .padding(.leading, 8)
+                    .padding(.trailing, panelOverlayTrailingInset)
                 }
 
+                HStack {
                 VStack(spacing: 12) {
                     Button { togglePanel(.volumes) } label: {
                         Label("Volumes", systemImage: "list.number")
@@ -125,9 +155,11 @@ private struct ReaderPreview: View {
                 }
                 .labelStyle(.iconOnly)
                 .padding(8)
+                .glassBackgroundEffect()
+                .padding(.leading, 8)
+                Spacer()
+                }
             }
-            .glassBackgroundEffect()
-            .padding(.leading, 8)
             .animation(.easeInOut(duration: 0.2), value: expandedPanel)
         }
         .background(.black)

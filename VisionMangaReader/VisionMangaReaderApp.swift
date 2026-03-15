@@ -2,18 +2,32 @@ import SwiftUI
 
 @main
 struct VisionMangaReaderApp: App {
-    var body: some Scene {
-        WindowGroup(id: "main") {
-            ContentView()
-        }
+    @State private var appState = AppState()
 
-        WindowGroup(id: "reader", for: ReaderWindowID.self) { $windowID in
-            if let windowID {
-                DuplicatedReaderView(windowID: windowID)
+    var body: some Scene {
+        WindowGroup(id: "reader", for: ReaderWindowState.self) { $windowState in
+            if let windowState {
+                ReaderWindowView(appState: appState, windowState: windowState)
+            } else if !appState.hasRoot {
+                SetupView(appState: appState, windowState: $windowState)
             } else {
-                Text("No reader data")
-                    .foregroundStyle(.secondary)
+                // Has root, no windowState — first window on relaunch
+                let first = appState.firstWindowState
+                Group {
+                    if let first {
+                        ReaderWindowView(appState: appState, windowState: first)
+                            .onAppear {
+                                windowState = first
+                                appState.openRemainingWindows(openWindow: openWindow)
+                            }
+                    } else {
+                        // Root exists but no volumes found
+                        SetupView(appState: appState, windowState: $windowState)
+                    }
+                }
             }
         }
     }
+
+    @Environment(\.openWindow) private var openWindow
 }

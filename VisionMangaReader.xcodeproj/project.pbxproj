@@ -9,11 +9,12 @@
 /* Begin PBXBuildFile section */
 		B10000000000000000000001 /* VisionMangaReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* VisionMangaReaderApp.swift */; };
 		B10000000000000000000002 /* MangaBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* MangaBook.swift */; };
-		B10000000000000000000003 /* ReaderWindowID.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* ReaderWindowID.swift */; };
+		B10000000000000000000003 /* ReaderWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* ReaderWindowState.swift */; };
+		B10000000000000000000013 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AppState.swift */; };
+		B10000000000000000000014 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* SetupView.swift */; };
 		B10000000000000000000004 /* FolderAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* FolderAccess.swift */; };
 		B10000000000000000000005 /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* ImageLoader.swift */; };
-		B10000000000000000000006 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* ContentView.swift */; };
-		B10000000000000000000007 /* DuplicatedReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* DuplicatedReaderView.swift */; };
+		B10000000000000000000007 /* ReaderWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* ReaderWindowView.swift */; };
 		B10000000000000000000008 /* PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* PageView.swift */; };
 		B10000000000000000000009 /* ReaderToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* ReaderToolbar.swift */; };
 		B10000000000000000000012 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ReaderView.swift */; };
@@ -43,11 +44,12 @@
 /* Begin PBXFileReference section */
 		A10000000000000000000001 /* VisionMangaReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionMangaReaderApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* MangaBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaBook.swift; sourceTree = "<group>"; };
-		A10000000000000000000003 /* ReaderWindowID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowID.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* ReaderWindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowState.swift; sourceTree = "<group>"; };
+		A10000000000000000000013 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A10000000000000000000014 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* FolderAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderAccess.swift; sourceTree = "<group>"; };
 		A10000000000000000000005 /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
-		A10000000000000000000006 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A10000000000000000000007 /* DuplicatedReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicatedReaderView.swift; sourceTree = "<group>"; };
+		A10000000000000000000007 /* ReaderWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowView.swift; sourceTree = "<group>"; };
 		A10000000000000000000008 /* PageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageView.swift; sourceTree = "<group>"; };
 		A10000000000000000000009 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
 		A10000000000000000000012 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -110,10 +112,11 @@
 		C10000000000000000000003 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000013 /* AppState.swift */,
 				A10000000000000000000002 /* MangaBook.swift */,
 				A1000000000000000000000D /* MangaLibrary.swift */,
 				A1000000000000000000000E /* MangaSeries.swift */,
-				A10000000000000000000003 /* ReaderWindowID.swift */,
+				A10000000000000000000003 /* ReaderWindowState.swift */,
 				A1000000000000000000000F /* VolumeProgress.swift */,
 			);
 			path = Models;
@@ -132,9 +135,9 @@
 		C10000000000000000000005 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000006 /* ContentView.swift */,
-				A10000000000000000000007 /* DuplicatedReaderView.swift */,
+				A10000000000000000000007 /* ReaderWindowView.swift */,
 				A10000000000000000000008 /* PageView.swift */,
+				A10000000000000000000014 /* SetupView.swift */,
 				A10000000000000000000009 /* ReaderToolbar.swift */,
 				A10000000000000000000012 /* ReaderView.swift */,
 				A10000000000000000000010 /* SeriesListView.swift */,
@@ -264,11 +267,12 @@
 			files = (
 				B10000000000000000000001 /* VisionMangaReaderApp.swift in Sources */,
 				B10000000000000000000002 /* MangaBook.swift in Sources */,
-				B10000000000000000000003 /* ReaderWindowID.swift in Sources */,
+				B10000000000000000000003 /* ReaderWindowState.swift in Sources */,
+				B10000000000000000000013 /* AppState.swift in Sources */,
+				B10000000000000000000014 /* SetupView.swift in Sources */,
 				B10000000000000000000004 /* FolderAccess.swift in Sources */,
 				B10000000000000000000005 /* ImageLoader.swift in Sources */,
-				B10000000000000000000006 /* ContentView.swift in Sources */,
-				B10000000000000000000007 /* DuplicatedReaderView.swift in Sources */,
+				B10000000000000000000007 /* ReaderWindowView.swift in Sources */,
 				B10000000000000000000008 /* PageView.swift in Sources */,
 				B10000000000000000000009 /* ReaderToolbar.swift in Sources */,
 				B10000000000000000000012 /* ReaderView.swift in Sources */,

@@ -1,9 +1,9 @@
 import SwiftUI
 
-struct DuplicatedReaderView: View {
-    let windowID: ReaderWindowID
+struct ReaderWindowView: View {
+    var appState: AppState
+    let windowState: ReaderWindowState
 
-    @State private var library = MangaLibrary()
     @State private var book = MangaBook()
     @State private var currentVolumeID: String?
     @State private var error: String?
@@ -22,39 +22,42 @@ struct DuplicatedReaderView: View {
                 ProgressView("Loading...")
             } else {
                 ReaderView(
-                    library: library,
+                    appState: appState,
                     book: book,
                     currentVolumeID: $currentVolumeID
                 )
             }
         }
         .onAppear {
-            resolveAndLoad()
+            loadVolume()
         }
         .onDisappear {
-            ReaderWindowID.removeOpenWindow(id: windowID.id)
+            appState.unregisterWindow(id: windowState.id)
         }
     }
 
-    private func resolveAndLoad() {
-        guard let rootURL = windowID.resolveRoot() else {
-            error = "Could not access folder. Bookmark may be stale."
-            return
+    private func loadVolume() {
+        // Ensure library is booted (shared state — idempotent)
+        appState.boot()
+
+        // If library root isn't set, try resolving from this window's bookmark
+        if appState.library.rootURL == nil {
+            guard let rootURL = windowState.resolveRoot() else {
+                error = "Could not access folder. Bookmark may be stale."
+                return
+            }
+            let _ = rootURL.startAccessingSecurityScopedResource()
+            appState.library.rootURL = rootURL
+            appState.library.scan()
         }
 
-        let _ = rootURL.startAccessingSecurityScopedResource()
-
-        library.rootURL = rootURL
-        library.scan()
-        library.loadHistory()
-
-        guard let vol = library.volume(id: windowID.volumeID) else {
+        guard let vol = appState.library.volume(id: windowState.volumeID) else {
             error = "Volume not found."
             return
         }
 
         book.loadPages(from: vol.url)
         currentVolumeID = vol.id
-        book.currentSpreadIndex = min(windowID.spreadIndex, max(0, book.spreadCount - 1))
+        book.currentSpreadIndex = min(windowState.spreadIndex, max(0, book.spreadCount - 1))
     }
 }

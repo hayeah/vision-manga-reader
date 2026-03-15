@@ -6,13 +6,15 @@ enum OrnamentPanel {
 }
 
 struct ReaderView: View {
-    @Bindable var library: MangaLibrary
+    var appState: AppState
     @Bindable var book: MangaBook
     @Binding var currentVolumeID: String?
 
     @State private var showEndOfVolumePrompt = false
     @State private var expandedPanel: OrnamentPanel?
     @Environment(\.openWindow) private var openWindow
+
+    private var library: MangaLibrary { appState.library }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -62,15 +64,12 @@ struct ReaderView: View {
     }
 
     private func duplicateWindow() {
-        guard let rootURL = library.rootURL,
-              let currentVolumeID else { return }
-        guard let windowID = try? ReaderWindowID(
-            rootURL: rootURL,
+        guard let currentVolumeID else { return }
+        appState.openNewReader(
             volumeID: currentVolumeID,
-            spreadIndex: book.currentSpreadIndex
-        ) else { return }
-        ReaderWindowID.addOpenWindow(windowID)
-        openWindow(id: "reader", value: windowID)
+            spreadIndex: book.currentSpreadIndex,
+            openWindow: openWindow
+        )
     }
 
     private var ornamentContent: some View {
@@ -260,5 +259,4 @@ struct ReaderView: View {
             book.currentSpreadIndex = min(progress.lastSpreadIndex, max(0, book.spreadCount - 1))
         }
     }
-
 }

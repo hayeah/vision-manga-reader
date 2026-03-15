@@ -9,6 +9,9 @@ class MangaLibrary {
 
     private static let rootBookmarkKey = "MangaLibraryRootBookmark"
     private static let stateFileName = ".manga-reader-state.json"
+    private static let progressSaveDebounceInterval: TimeInterval = 0.4
+
+    private var pendingStateSave: DispatchWorkItem?
 
     // MARK: - Root bookmark
 
@@ -154,7 +157,27 @@ class MangaLibrary {
         }
     }
 
-    func saveState() {
+    func saveState(reason: String = "immediate") {
+        pendingStateSave?.cancel()
+        pendingStateSave = nil
+        writeState(reason: reason)
+    }
+
+    private func scheduleStateSave(reason: String) {
+        pendingStateSave?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.writeState(reason: "debounced:\(reason)")
+        }
+        pendingStateSave = workItem
+
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + Self.progressSaveDebounceInterval,
+            execute: workItem
+        )
+    }
+
+    private func writeState(reason: String) {
         guard let url = stateFileURL() else { return }
 
         let encoder = JSONEncoder()
@@ -164,8 +187,9 @@ class MangaLibrary {
         do {
             let data = try encoder.encode(history)
             try data.write(to: url, options: .atomic)
+            print("[DEBUG] saveState ok reason=\(reason) path=\(url.path) windows=\(history.windows.count)")
         } catch {
-            print("[DEBUG] saveState failed path=\(url.path) error=\(error)")
+            print("[DEBUG] saveState failed reason=\(reason) path=\(url.path) error=\(error)")
         }
     }
 
@@ -192,7 +216,7 @@ class MangaLibrary {
             history.windows[idx].spreadIndex = spreadIndex
         }
 
-        saveState()
+        scheduleStateSave(reason: "progress")
     }
 
     func lastReadVolume(forSeries seriesID: String) -> MangaVolume? {
@@ -214,6 +238,7 @@ class MangaLibrary {
     }
 
     deinit {
+        pendingStateSave?.cancel()
         rootURL?.stopAccessingSecurityScopedResource()
     }
 }

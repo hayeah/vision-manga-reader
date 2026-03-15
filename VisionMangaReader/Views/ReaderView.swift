@@ -33,6 +33,9 @@ struct PanelListRowButton<Accessory: View>: View {
             .padding(.horizontal, 12)
             .padding(.vertical, verticalPadding)
             .contentShape(rowShape)
+            // Keep the selected fill and the gaze highlight on the same clipped shape.
+            // visionOS applies the hover treatment on top, so the selected row gets a
+            // stronger version of the same rectangle when looked at.
             .background(isCurrent ? .white.opacity(0.14) : .clear, in: rowShape)
         }
         .buttonStyle(.plain)

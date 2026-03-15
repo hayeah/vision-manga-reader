@@ -195,8 +195,10 @@ class MangaLibrary {
     }
 
     private func historyFileURL() -> URL? {
-        guard let root = rootURL else { return nil }
-        return root.appendingPathComponent(Self.historyFileName)
+        guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return dir.appendingPathComponent(Self.historyFileName)
     }
 
     deinit {

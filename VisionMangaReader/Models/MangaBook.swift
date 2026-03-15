@@ -14,7 +14,7 @@ class MangaBook {
     var pageURLs: [URL] = []
     var currentSpreadIndex: Int = 0
     private(set) var spreads: [SpreadLayout] = []
-    private(set) var pageSizes: [CGSize] = []
+    var pageSizes: [CGSize] = []
     var loadError: String?
 
     // Toggle support
@@ -85,6 +85,18 @@ class MangaBook {
             let clampedLocal = min(localIdx, count - 1)
             currentSpreadIndex = seqStart + clampedLocal
         }
+    }
+
+    /// Load pages from local URLs without security-scoped access (for previews/tests).
+    func loadLocalPages(_ urls: [URL]) {
+        closeFolder()
+        pageURLs = urls
+        pageSizes = urls.map { Self.imageSize(for: $0) }
+        landscapeFlags = pageSizes.map { $0.width > $0.height }
+        portraitSequences = findPortraitSequences()
+        shiftedSequences = []
+        rebuildSpreads()
+        currentSpreadIndex = 0
     }
 
     // MARK: - Loading

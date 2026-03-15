@@ -7,7 +7,7 @@ struct DuplicatedReaderView: View {
     @State private var book = MangaBook()
     @State private var error: String?
     @State private var showFilePicker = false
-    @State private var noImagesFound = false
+    @State private var showVolumeDrawer = false
 
     var body: some View {
         Group {
@@ -24,9 +24,7 @@ struct DuplicatedReaderView: View {
             } else {
                 VStack(spacing: 0) {
                     SpreadView(book: book)
-                    ReaderToolbar(book: book) {
-                        showFilePicker = true
-                    }
+                    ReaderToolbar(book: book, showVolumeDrawer: $showVolumeDrawer)
                 }
             }
         }

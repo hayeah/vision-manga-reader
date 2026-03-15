@@ -2,16 +2,22 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    @State private var library = MangaLibrary()
     @State private var book = MangaBook()
+    @State private var currentVolumeID: String?
     @State private var showFilePicker = false
     @State private var noImagesFound = false
+    @State private var showVolumeDrawer = false
+    @State private var showEndOfVolumePrompt = false
 
     var body: some View {
         Group {
-            if book.pageURLs.isEmpty {
-                folderPickerView
+            if library.rootURL == nil {
+                setupView
+            } else if book.pageURLs.isEmpty {
+                seriesListOnly
             } else {
-                readerView
+                readerWithPanels
             }
         }
         .fileImporter(
@@ -19,14 +25,19 @@ struct ContentView: View {
             allowedContentTypes: [UTType.folder],
             allowsMultipleSelection: false
         ) { result in
-            handleFolderSelection(result)
+            handleRootFolderSelection(result)
         }
         .onAppear {
-            restoreLastFolder()
+            library.loadHistory()
+            if library.restoreRoot() {
+                restoreLastReading()
+            }
         }
     }
 
-    private var folderPickerView: some View {
+    // MARK: - Setup (no root yet)
+
+    private var setupView: some View {
         VStack(spacing: 20) {
             Image(systemName: "book.pages")
                 .font(.system(size: 64))
@@ -35,69 +46,164 @@ struct ContentView: View {
             Text("VisionMangaReader")
                 .font(.largeTitle)
 
-            Text("Select a folder of manga page images")
+            Text("Select your manga folder")
                 .foregroundStyle(.secondary)
 
-            if noImagesFound {
-                Text("No images found in selected folder")
-                    .foregroundStyle(.red)
-            }
-
-            if let loadError = book.loadError {
-                Text(loadError)
-                    .foregroundStyle(.red)
-            }
-
-            Button("Open Folder") {
+            Button("Select Folder") {
                 showFilePicker = true
             }
             .buttonStyle(.borderedProminent)
         }
     }
 
-    private var readerView: some View {
-        VStack(spacing: 0) {
-            SpreadView(book: book)
+    // MARK: - Series list only (no volume loaded)
 
-            ReaderToolbar(book: book) {
-                showFilePicker = true
+    private var seriesListOnly: some View {
+        HStack(spacing: 0) {
+            SeriesListView(
+                library: library,
+                currentVolumeID: currentVolumeID,
+                onSelectSeries: openSeries
+            )
+
+            VStack(spacing: 20) {
+                Image(systemName: "book.pages")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+                Text("Select a series to start reading")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    // MARK: - Reader with side panels
+
+    private var readerWithPanels: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                ZStack(alignment: .top) {
+                    SpreadView(book: book)
+
+                    if showEndOfVolumePrompt {
+                        endOfVolumePrompt
+                    }
+                }
+
+                ReaderToolbar(
+                    book: book,
+                    showVolumeDrawer: $showVolumeDrawer,
+                    onLibrary: {
+                        book.closeFolder()
+                        currentVolumeID = nil
+                        showVolumeDrawer = false
+                        showEndOfVolumePrompt = false
+                    }
+                )
+            }
+
+            if showVolumeDrawer, let currentSeries {
+                VolumeDrawer(
+                    volumes: currentSeries.volumes,
+                    currentVolumeID: currentVolumeID,
+                    onSelectVolume: openVolume
+                )
+                .transition(.move(edge: .trailing))
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: showVolumeDrawer)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     book.closeFolder()
-                    noImagesFound = false
-                    FolderAccess.clearBookmark()
+                    currentVolumeID = nil
+                    showVolumeDrawer = false
+                    showEndOfVolumePrompt = false
                 } label: {
-                    Label("Close", systemImage: "xmark")
+                    Label("Library", systemImage: "books.vertical")
                 }
+            }
+        }
+        .onChange(of: book.currentSpreadIndex) { _, newIndex in
+            guard let currentVolumeID else { return }
+            // Only primary window tracks progress
+            library.updateProgress(
+                volumeID: currentVolumeID,
+                spreadIndex: newIndex,
+                totalSpreads: book.spreadCount
+            )
+            // Check end of volume
+            if newIndex >= book.spreadCount - 1 {
+                showEndOfVolumePrompt = true
+            } else {
+                showEndOfVolumePrompt = false
             }
         }
     }
 
-    private func handleFolderSelection(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result, let url = urls.first else { return }
+    // MARK: - End of volume prompt
 
-        // Temporarily access to enumerate and save bookmark
-        guard url.startAccessingSecurityScopedResource() else { return }
-        let images = FolderAccess.enumerateImages(in: url)
-        url.stopAccessingSecurityScopedResource()
-
-        if images.isEmpty {
-            noImagesFound = true
-            return
+    private var endOfVolumePrompt: some View {
+        HStack(spacing: 12) {
+            if let currentVolumeID, let nextVol = library.nextVolume(after: currentVolumeID) {
+                Text("Open \(nextVol.title)?")
+                    .font(.subheadline)
+                Button("Next") {
+                    openVolume(nextVol)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            } else {
+                Text("Volume complete")
+                    .font(.subheadline)
+            }
+            Button("Dismiss") {
+                showEndOfVolumePrompt = false
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
         }
-
-        noImagesFound = false
-        FolderAccess.saveBookmark(for: url)
-        // loadPages starts its own security-scoped access that persists
-        book.loadPages(from: url)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.top, 12)
     }
 
-    private func restoreLastFolder() {
-        guard let url = FolderAccess.restoreBookmark() else { return }
-        // loadPages handles security-scoped access
-        book.loadPages(from: url)
+    // MARK: - Helpers
+
+    private var currentSeries: MangaSeries? {
+        guard let currentVolumeID else { return nil }
+        return library.seriesFor(volumeID: currentVolumeID)
+    }
+
+    private func handleRootFolderSelection(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result, let url = urls.first else { return }
+        library.setRoot(url)
+    }
+
+    private func openSeries(_ s: MangaSeries) {
+        // Resume from last-read volume, or start at first
+        if let lastRead = library.lastReadVolume(forSeries: s.id) {
+            openVolume(lastRead)
+        } else if let first = s.volumes.first {
+            openVolume(first)
+        }
+    }
+
+    private func openVolume(_ vol: MangaVolume) {
+        showEndOfVolumePrompt = false
+        book.loadPages(from: vol.url)
+        currentVolumeID = vol.id
+
+        // Restore spread position if we have history
+        if let progress = library.history.progress[vol.id] {
+            book.currentSpreadIndex = min(progress.lastSpreadIndex, max(0, book.spreadCount - 1))
+        }
+    }
+
+    private func restoreLastReading() {
+        guard let lastID = library.history.lastActiveVolumeID,
+              let vol = library.volume(id: lastID) else { return }
+        openVolume(vol)
     }
 }

@@ -2,8 +2,9 @@ import SwiftUI
 
 struct ReaderToolbar: View {
     @Bindable var book: MangaBook
+    @Binding var showVolumeDrawer: Bool
     @Environment(\.openWindow) private var openWindow
-    var onOpenFolder: () -> Void = {}
+    var onLibrary: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 16) {
@@ -27,13 +28,21 @@ struct ReaderToolbar: View {
             Spacer()
 
             HStack(spacing: 12) {
-                // Open folder
+                // Volume drawer toggle
                 Button {
-                    onOpenFolder()
+                    showVolumeDrawer.toggle()
                 } label: {
-                    Label("Open", systemImage: "folder")
+                    Label("Volumes", systemImage: "list.number")
                 }
-                .help("Open another folder")
+                .help("Show volume list")
+
+                // Library
+                Button {
+                    onLibrary()
+                } label: {
+                    Label("Library", systemImage: "books.vertical")
+                }
+                .help("Back to library")
 
                 // Duplicate window
                 Button {

@@ -69,6 +69,7 @@ struct ReaderView: View {
             volumeID: currentVolumeID,
             spreadIndex: book.currentSpreadIndex
         ) else { return }
+        ReaderWindowID.addOpenWindow(windowID)
         openWindow(id: "reader", value: windowID)
     }
 

@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var book = MangaBook()
     @State private var currentVolumeID: String?
     @State private var showFilePicker = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
@@ -35,6 +36,7 @@ struct ContentView: View {
             if library.restoreRoot() {
                 restoreLastReading()
             }
+            restoreOpenWindows()
         }
     }
 
@@ -105,5 +107,12 @@ struct ContentView: View {
         guard let lastID = library.history.lastActiveVolumeID,
               let vol = library.volume(id: lastID) else { return }
         openVolume(vol)
+    }
+
+    private func restoreOpenWindows() {
+        let saved = ReaderWindowID.loadOpenWindows()
+        for windowID in saved {
+            openWindow(id: "reader", value: windowID)
+        }
     }
 }

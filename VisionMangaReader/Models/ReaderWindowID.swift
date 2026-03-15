@@ -25,7 +25,46 @@ struct ReaderWindowID: Codable, Hashable {
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         ) else { return nil }
-        if isStale { return nil }
+        // Stale bookmarks still resolve — the URL is usable,
+        // but the bookmark data should ideally be refreshed.
         return url
+    }
+
+    // MARK: - Open windows persistence
+
+    private static let storageKey = "OpenReaderWindows"
+
+    static func saveOpenWindows(_ windows: [ReaderWindowID]) {
+        guard let data = try? JSONEncoder().encode(windows) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+
+    static func loadOpenWindows() -> [ReaderWindowID] {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let windows = try? JSONDecoder().decode([ReaderWindowID].self, from: data) else {
+            return []
+        }
+        return windows
+    }
+
+    static func addOpenWindow(_ windowID: ReaderWindowID) {
+        var windows = loadOpenWindows()
+        windows.removeAll { $0.id == windowID.id }
+        windows.append(windowID)
+        saveOpenWindows(windows)
+    }
+
+    static func removeOpenWindow(id: UUID) {
+        var windows = loadOpenWindows()
+        windows.removeAll { $0.id == id }
+        saveOpenWindows(windows)
+    }
+
+    static func updateOpenWindow(_ windowID: ReaderWindowID) {
+        var windows = loadOpenWindows()
+        if let idx = windows.firstIndex(where: { $0.id == windowID.id }) {
+            windows[idx] = windowID
+            saveOpenWindows(windows)
+        }
     }
 }

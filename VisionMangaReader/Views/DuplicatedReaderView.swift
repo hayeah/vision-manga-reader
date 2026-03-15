@@ -31,6 +31,9 @@ struct DuplicatedReaderView: View {
         .onAppear {
             resolveAndLoad()
         }
+        .onDisappear {
+            ReaderWindowID.removeOpenWindow(id: windowID.id)
+        }
     }
 
     private func resolveAndLoad() {
@@ -39,10 +42,7 @@ struct DuplicatedReaderView: View {
             return
         }
 
-        guard rootURL.startAccessingSecurityScopedResource() else {
-            error = "Could not access folder."
-            return
-        }
+        let _ = rootURL.startAccessingSecurityScopedResource()
 
         library.rootURL = rootURL
         library.scan()

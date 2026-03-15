@@ -16,6 +16,7 @@
 		B10000000000000000000007 /* DuplicatedReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* DuplicatedReaderView.swift */; };
 		B10000000000000000000008 /* PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* PageView.swift */; };
 		B10000000000000000000009 /* ReaderToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* ReaderToolbar.swift */; };
+		B10000000000000000000012 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ReaderView.swift */; };
 		B1000000000000000000000A /* SpreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000A /* SpreadView.swift */; };
 		B1000000000000000000000B /* SubjectExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* SubjectExtractor.swift */; };
 		B1000000000000000000000C /* MangaLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* MangaLibrary.swift */; };
@@ -49,6 +50,7 @@
 		A10000000000000000000007 /* DuplicatedReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicatedReaderView.swift; sourceTree = "<group>"; };
 		A10000000000000000000008 /* PageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageView.swift; sourceTree = "<group>"; };
 		A10000000000000000000009 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
+		A10000000000000000000012 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		A1000000000000000000000A /* SpreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadView.swift; sourceTree = "<group>"; };
 		A1000000000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000000000000000000000C /* SubjectExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectExtractor.swift; sourceTree = "<group>"; };
@@ -134,6 +136,7 @@
 				A10000000000000000000007 /* DuplicatedReaderView.swift */,
 				A10000000000000000000008 /* PageView.swift */,
 				A10000000000000000000009 /* ReaderToolbar.swift */,
+				A10000000000000000000012 /* ReaderView.swift */,
 				A10000000000000000000010 /* SeriesListView.swift */,
 				A1000000000000000000000A /* SpreadView.swift */,
 				A10000000000000000000011 /* VolumeDrawer.swift */,
@@ -268,6 +271,7 @@
 				B10000000000000000000007 /* DuplicatedReaderView.swift in Sources */,
 				B10000000000000000000008 /* PageView.swift in Sources */,
 				B10000000000000000000009 /* ReaderToolbar.swift in Sources */,
+				B10000000000000000000012 /* ReaderView.swift in Sources */,
 				B1000000000000000000000A /* SpreadView.swift in Sources */,
 				B1000000000000000000000B /* SubjectExtractor.swift in Sources */,
 				B1000000000000000000000C /* MangaLibrary.swift in Sources */,

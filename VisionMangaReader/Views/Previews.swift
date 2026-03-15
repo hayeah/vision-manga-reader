@@ -41,10 +41,8 @@ private func previewVolumes(count: Int = 9) -> [MangaVolume] {
 
 private func previewHistory() -> ReadingHistory {
     var h = ReadingHistory()
-    // First two volumes completed
     h.progress["SeriesA/第01卷"] = VolumeProgress(lastSpreadIndex: 19, totalSpreads: 20, lastReadDate: .now, isCompleted: true)
     h.progress["SeriesA/第02卷"] = VolumeProgress(lastSpreadIndex: 24, totalSpreads: 25, lastReadDate: .now, isCompleted: true)
-    // Third volume in progress
     h.progress["SeriesA/第03卷"] = VolumeProgress(lastSpreadIndex: 8, totalSpreads: 22, lastReadDate: .now, isCompleted: false)
     return h
 }
@@ -94,20 +92,6 @@ private func previewLibrary() -> MangaLibrary {
     .frame(height: 500)
 }
 
-#Preview("Reader + Drawer") {
-    let book = previewBook()
-    HStack(spacing: 0) {
-        SpreadView(book: book)
-        VolumeDrawer(
-            volumes: previewVolumes(),
-            currentVolumeID: "SeriesA/第04卷",
-
-            onSelectVolume: { _ in }
-        )
-    }
-    .background(.black)
-}
-
 #Preview("Full Reader") {
     ReaderPreview()
 }
@@ -115,68 +99,86 @@ private func previewLibrary() -> MangaLibrary {
 /// Stateful wrapper so the reader preview has interactive controls.
 private struct ReaderPreview: View {
     @State private var book = previewBook()
-    @State private var showVolumeDrawer = false
+    @State private var expandedPanel: OrnamentPanel?
 
     var body: some View {
-        HStack(spacing: 0) {
-            ZStack(alignment: .bottomTrailing) {
-                SpreadView(book: book)
+        ZStack(alignment: .bottomTrailing) {
+            SpreadView(book: book)
 
-                if book.spreadCount > 0 {
-                    Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
-                        .monospacedDigit()
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 16)
-                }
-            }
-
-            if showVolumeDrawer {
-                VolumeDrawer(
-                    volumes: previewVolumes(),
-                    currentVolumeID: "SeriesA/第04卷",
-                    onSelectVolume: { _ in }
-                )
-                .transition(.move(edge: .trailing))
+            if book.spreadCount > 0 {
+                Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
+                    .monospacedDigit()
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 16)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: showVolumeDrawer)
-        // Ornaments only render in a real window, not canvas previews.
-        // Simulating the nav buttons as an overlay for preview purposes.
+        // Ornaments don't render in canvas previews — simulate as overlay.
         .overlay(alignment: .leading) {
-            VStack(spacing: 12) {
-                Button { showVolumeDrawer.toggle() } label: {
-                    Label("Volumes", systemImage: "list.number")
-                }
-                Button {} label: {
-                    Label("Library", systemImage: "books.vertical")
-                }
-                Button {} label: {
-                    Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+            HStack(spacing: 0) {
+                if expandedPanel == .volumes {
+                    ScrollView {
+                        VStack(spacing: 4) {
+                            ForEach(previewVolumes()) { vol in
+                                Button { } label: {
+                                    Text(vol.title)
+                                        .font(.callout)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(8)
+                    }
+                    .frame(width: 200).frame(maxHeight: 400)
                 }
 
-                Divider()
+                VStack(spacing: 12) {
+                    Button { togglePanel(.volumes) } label: {
+                        Label("Volumes", systemImage: "list.number")
+                    }
+                    Button { togglePanel(.series) } label: {
+                        Label("Library", systemImage: "books.vertical")
+                    }
+                    Button {} label: {
+                        Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+                    }
 
-                Button { book.toggleShift() } label: {
-                    Label("Toggle page pairing", systemImage: "arrow.left.arrow.right")
-                        .symbolVariant(book.isCurrentSequenceShifted ? .fill : .none)
+                    Divider()
+
+                    Button { book.toggleShift() } label: {
+                        Label("Toggle page pairing", systemImage: "arrow.left.arrow.right")
+                            .symbolVariant(book.isCurrentSequenceShifted ? .fill : .none)
+                    }
+                    .disabled(!book.canToggleShift)
                 }
-                .disabled(!book.canToggleShift)
+                .labelStyle(.iconOnly)
+                .padding(8)
             }
-            .labelStyle(.iconOnly)
-            .padding(8)
             .glassBackgroundEffect()
             .padding(.leading, 8)
+            .animation(.easeInOut(duration: 0.2), value: expandedPanel)
         }
         .background(.black)
+    }
+
+    private func togglePanel(_ panel: OrnamentPanel) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if expandedPanel == panel {
+                expandedPanel = nil
+            } else {
+                expandedPanel = panel
+            }
+        }
     }
 }
 
 #Preview("End of Volume Prompt") {
     VStack {
         Spacer()
-        // Simulating the prompt overlay
         HStack(spacing: 12) {
             Text("Open 第05卷?")
                 .font(.subheadline)

@@ -2,23 +2,25 @@ import Foundation
 
 struct ReaderWindowID: Codable, Hashable {
     var id: UUID
-    var folderBookmark: Data
+    var rootBookmark: Data
+    var volumeID: String
     var spreadIndex: Int
 
-    init(folderURL: URL, spreadIndex: Int) throws {
+    init(rootURL: URL, volumeID: String, spreadIndex: Int) throws {
         self.id = UUID()
-        self.folderBookmark = try folderURL.bookmarkData(
+        self.rootBookmark = try rootURL.bookmarkData(
             options: [],
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
+        self.volumeID = volumeID
         self.spreadIndex = spreadIndex
     }
 
-    func resolveFolder() -> URL? {
+    func resolveRoot() -> URL? {
         var isStale = false
         guard let url = try? URL(
-            resolvingBookmarkData: folderBookmark,
+            resolvingBookmarkData: rootBookmark,
             options: [],
             relativeTo: nil,
             bookmarkDataIsStale: &isStale

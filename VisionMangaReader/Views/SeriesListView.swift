@@ -38,19 +38,9 @@ struct SeriesListView: View {
                 Button {
                     onSelectSeries(s)
                 } label: {
-                    HStack {
-                        Text(s.title)
-                            .lineLimit(1)
-                            .foregroundStyle(s.id == currentSeriesID ? .primary : .secondary)
-
-                        Spacer()
-
-                        if let prog = readingIndicator(for: s) {
-                            Text(prog)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
+                    Text(s.title)
+                        .lineLimit(1)
+                        .foregroundStyle(s.id == currentSeriesID ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
                 .listRowBackground(
@@ -90,11 +80,4 @@ struct SeriesListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func readingIndicator(for s: MangaSeries) -> String? {
-        let readCount = s.volumes.filter { library.history.progress[$0.id]?.isCompleted == true }.count
-        if readCount > 0 {
-            return "\(readCount)/\(s.volumes.count)"
-        }
-        return nil
-    }
 }

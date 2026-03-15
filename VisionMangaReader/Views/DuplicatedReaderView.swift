@@ -1,13 +1,12 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct DuplicatedReaderView: View {
     let windowID: ReaderWindowID
 
+    @State private var library = MangaLibrary()
     @State private var book = MangaBook()
+    @State private var currentVolumeID: String?
     @State private var error: String?
-    @State private var showFilePicker = false
-    @State private var showVolumeDrawer = false
 
     var body: some View {
         Group {
@@ -22,18 +21,12 @@ struct DuplicatedReaderView: View {
             } else if book.pageURLs.isEmpty {
                 ProgressView("Loading...")
             } else {
-                VStack(spacing: 0) {
-                    SpreadView(book: book)
-                    ReaderToolbar(book: book)
-                }
+                ReaderView(
+                    library: library,
+                    book: book,
+                    currentVolumeID: $currentVolumeID
+                )
             }
-        }
-        .fileImporter(
-            isPresented: $showFilePicker,
-            allowedContentTypes: [UTType.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            handleFolderSelection(result)
         }
         .onAppear {
             resolveAndLoad()
@@ -41,44 +34,27 @@ struct DuplicatedReaderView: View {
     }
 
     private func resolveAndLoad() {
-        guard let url = windowID.resolveFolder() else {
+        guard let rootURL = windowID.resolveRoot() else {
             error = "Could not access folder. Bookmark may be stale."
             return
         }
 
-        book.loadPages(from: url)
-
-        if let loadError = book.loadError {
-            error = loadError
+        guard rootURL.startAccessingSecurityScopedResource() else {
+            error = "Could not access folder."
             return
         }
 
-        if book.pageURLs.isEmpty {
-            error = "No images found in folder."
+        library.rootURL = rootURL
+        library.scan()
+        library.loadHistory()
+
+        guard let vol = library.volume(id: windowID.volumeID) else {
+            error = "Volume not found."
             return
         }
 
+        book.loadPages(from: vol.url)
+        currentVolumeID = vol.id
         book.currentSpreadIndex = min(windowID.spreadIndex, max(0, book.spreadCount - 1))
-    }
-
-    private func handleFolderSelection(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result, let url = urls.first else { return }
-
-        guard url.startAccessingSecurityScopedResource() else { return }
-        let images = FolderAccess.enumerateImages(in: url)
-        url.stopAccessingSecurityScopedResource()
-
-        if images.isEmpty {
-            error = "No images found in selected folder"
-            return
-        }
-
-        error = nil
-        FolderAccess.saveBookmark(for: url)
-        book.loadPages(from: url)
-
-        if let loadError = book.loadError {
-            error = loadError
-        }
     }
 }

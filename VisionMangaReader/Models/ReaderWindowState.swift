@@ -6,8 +6,8 @@ struct ReaderWindowState: Codable, Hashable {
     var volumeID: String
     var spreadIndex: Int
 
-    init(rootURL: URL, volumeID: String, spreadIndex: Int) throws {
-        self.id = UUID()
+    init(id: UUID = UUID(), rootURL: URL, volumeID: String, spreadIndex: Int) throws {
+        self.id = id
         self.rootBookmark = try rootURL.bookmarkData(
             options: [],
             includingResourceValuesForKeys: nil,

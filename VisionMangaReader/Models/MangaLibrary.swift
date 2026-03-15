@@ -3,12 +3,12 @@ import Observation
 
 @Observable
 class MangaLibrary {
-    internal(set) var rootURL: URL?
+    var rootURL: URL?
     private(set) var series: [MangaSeries] = []
-    private(set) var history: ReadingHistory = ReadingHistory()
+    var history: ReadingHistory = ReadingHistory()
 
     private static let rootBookmarkKey = "MangaLibraryRootBookmark"
-    private static let historyFileName = "reading_history.json"
+    private static let stateFileName = ".manga-reader-state.json"
 
     // MARK: - Root bookmark
 
@@ -139,24 +139,34 @@ class MangaLibrary {
         return series.first(where: { $0.id == seriesID })
     }
 
-    // MARK: - Reading history persistence
+    // MARK: - State persistence (unified JSON in root directory)
 
-    func loadHistory() {
-        guard let url = historyFileURL(),
-              let data = try? Data(contentsOf: url) else { return }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let decoded = try? decoder.decode(ReadingHistory.self, from: data) {
-            history = decoded
+    func loadState() {
+        guard let url = stateFileURL() else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            history = try decoder.decode(ReadingHistory.self, from: data)
+        } catch {
+            print("[DEBUG] loadState failed path=\(url.path) error=\(error)")
         }
     }
 
-    func saveHistory() {
-        guard let url = historyFileURL() else { return }
+    func saveState() {
+        guard let url = stateFileURL() else { return }
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        guard let data = try? encoder.encode(history) else { return }
-        try? data.write(to: url, options: .atomic)
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        do {
+            let data = try encoder.encode(history)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            print("[DEBUG] saveState failed path=\(url.path) error=\(error)")
+        }
     }
 
     func updateProgress(volumeID: String, spreadIndex: Int, totalSpreads: Int) {
@@ -177,7 +187,12 @@ class MangaLibrary {
             history.recentSeriesIDs = Array(history.recentSeriesIDs.prefix(20))
         }
 
-        saveHistory()
+        // Update window spread index
+        if let idx = history.windows.firstIndex(where: { $0.volumeID == volumeID }) {
+            history.windows[idx].spreadIndex = spreadIndex
+        }
+
+        saveState()
     }
 
     func lastReadVolume(forSeries seriesID: String) -> MangaVolume? {
@@ -194,11 +209,8 @@ class MangaLibrary {
         return latest?.0
     }
 
-    private func historyFileURL() -> URL? {
-        guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        return dir.appendingPathComponent(Self.historyFileName)
+    private func stateFileURL() -> URL? {
+        rootURL?.appendingPathComponent(Self.stateFileName)
     }
 
     deinit {

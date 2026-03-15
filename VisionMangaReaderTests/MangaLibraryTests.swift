@@ -425,3 +425,57 @@ struct LastReadVolumeTests {
         #expect(lib.lastReadVolume(forSeries: "S") == nil)
     }
 }
+
+@Suite("AppState window restoration")
+struct AppStateWindowRestorationTests {
+
+    private func makeTempMangaRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AppStateWindowTests-\(UUID().uuidString)")
+        let volumeDir = root.appendingPathComponent("A").appendingPathComponent("v1")
+        try FileManager.default.createDirectory(at: volumeDir, withIntermediateDirectories: true)
+        try Data("img".utf8).write(to: volumeDir.appendingPathComponent("001.jpg"))
+        return root
+    }
+
+    @Test("prepareInitialWindowState restores saved window once and stays stable")
+    func prepareInitialWindowStateRestoresOnce() throws {
+        let root = try makeTempMangaRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let appState = AppState()
+        appState.library.rootURL = root
+        appState.library.scan()
+
+        let savedID = UUID()
+        appState.library.history.windows = [
+            SavedWindow(id: savedID, volumeID: "A/v1", spreadIndex: 3)
+        ]
+
+        let restored = try #require(appState.prepareInitialWindowState())
+        #expect(restored.id == savedID)
+        #expect(appState.library.history.windows.count == 1)
+
+        let repeated = try #require(appState.prepareInitialWindowState())
+        #expect(repeated.id == savedID)
+        #expect(appState.library.history.windows.count == 1)
+    }
+
+    @Test("prepareInitialWindowState creates one new window when history is empty")
+    func prepareInitialWindowStateCreatesOneWindow() throws {
+        let root = try makeTempMangaRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let appState = AppState()
+        appState.library.rootURL = root
+        appState.library.scan()
+
+        let created = try #require(appState.prepareInitialWindowState())
+        #expect(appState.library.history.windows.count == 1)
+        #expect(appState.library.history.windows[0].id == created.id)
+
+        let repeated = try #require(appState.prepareInitialWindowState())
+        #expect(repeated.id == created.id)
+        #expect(appState.library.history.windows.count == 1)
+    }
+}

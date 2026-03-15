@@ -31,7 +31,7 @@ struct SetupView: View {
             if case .success(let urls) = result, let url = urls.first {
                 appState.library.setRoot(url)
                 // After setting root, create a reader for the first volume
-                if let first = appState.firstWindowState {
+                if let first = appState.prepareInitialWindowState() {
                     windowState = first
                 }
             }

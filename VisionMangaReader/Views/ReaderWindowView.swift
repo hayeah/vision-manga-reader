@@ -23,12 +23,14 @@ struct ReaderWindowView: View {
             } else {
                 ReaderView(
                     appState: appState,
+                    windowID: windowState.id,
                     book: book,
                     currentVolumeID: $currentVolumeID
                 )
             }
         }
         .onAppear {
+            appState.registerWindow(windowState)
             loadVolume()
         }
         .onDisappear {

@@ -7,6 +7,7 @@ enum OrnamentPanel {
 
 struct ReaderView: View {
     var appState: AppState
+    var windowID: UUID
     @Bindable var book: MangaBook
     @Binding var currentVolumeID: String?
 
@@ -255,8 +256,13 @@ struct ReaderView: View {
         book.loadPages(from: vol.url)
         currentVolumeID = vol.id
 
+        let spreadIndex: Int
         if let progress = library.history.progress[vol.id] {
-            book.currentSpreadIndex = min(progress.lastSpreadIndex, max(0, book.spreadCount - 1))
+            spreadIndex = min(progress.lastSpreadIndex, max(0, book.spreadCount - 1))
+        } else {
+            spreadIndex = 0
         }
+        book.currentSpreadIndex = spreadIndex
+        appState.updateWindowVolume(windowID: windowID, volumeID: vol.id, spreadIndex: spreadIndex)
     }
 }

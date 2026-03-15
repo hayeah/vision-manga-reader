@@ -6,8 +6,11 @@ import SwiftUI
 class AppState {
     let library = MangaLibrary()
 
-    private static let savedWindowsKey = "OpenReaderWindows"
     private var didBoot = false
+    private var initialWindowState: ReaderWindowState?
+    private var didPrepareInitialWindowState = false
+    private var didRestoreSavedWindows = false
+    private var pendingRemainingWindowRestore = false
 
     // MARK: - Boot
 
@@ -18,17 +21,34 @@ class AppState {
     func boot() {
         guard !didBoot else { return }
         didBoot = true
-        library.loadHistory()
         let _ = library.restoreRoot()
+        library.loadState()
     }
 
     // MARK: - First window state
 
-    var firstWindowState: ReaderWindowState? {
-        let saved = loadSavedWindows()
-        if let first = saved.first {
-            return first
+    func prepareInitialWindowState() -> ReaderWindowState? {
+        boot()
+        if didPrepareInitialWindowState {
+            return initialWindowState
         }
+        didPrepareInitialWindowState = true
+
+        if !didRestoreSavedWindows,
+           let first = library.history.windows.first {
+            didRestoreSavedWindows = true
+            pendingRemainingWindowRestore = true
+            guard let rootURL = library.rootURL else { return nil }
+            initialWindowState = try? ReaderWindowState(
+                id: first.id,
+                rootURL: rootURL,
+                volumeID: first.volumeID,
+                spreadIndex: first.spreadIndex
+            )
+            return initialWindowState
+        }
+
+        didRestoreSavedWindows = true
 
         // No saved windows — create one from last-read or first volume
         guard let rootURL = library.rootURL else { return nil }
@@ -51,12 +71,21 @@ class AppState {
         ) else { return nil }
 
         addSavedWindow(state)
-        return state
+        initialWindowState = state
+        return initialWindowState
     }
 
-    func openRemainingWindows(openWindow: OpenWindowAction) {
-        let saved = loadSavedWindows()
-        for state in saved.dropFirst() {
+    func openRemainingWindowsIfNeeded(openWindow: OpenWindowAction) {
+        guard pendingRemainingWindowRestore else { return }
+        pendingRemainingWindowRestore = false
+        guard let rootURL = library.rootURL else { return }
+        for saved in library.history.windows.dropFirst() {
+            guard let state = try? ReaderWindowState(
+                id: saved.id,
+                rootURL: rootURL,
+                volumeID: saved.volumeID,
+                spreadIndex: saved.spreadIndex
+            ) else { continue }
             openWindow(id: "reader", value: state)
         }
     }
@@ -95,31 +124,47 @@ class AppState {
         removeSavedWindow(id: id)
     }
 
-    // MARK: - Persistence
-
-    private func loadSavedWindows() -> [ReaderWindowState] {
-        guard let data = UserDefaults.standard.data(forKey: Self.savedWindowsKey),
-              let windows = try? JSONDecoder().decode([ReaderWindowState].self, from: data) else {
-            return []
+    func updateWindowVolume(windowID: UUID, volumeID: String, spreadIndex: Int) {
+        guard let idx = library.history.windows.firstIndex(where: { $0.id == windowID }) else {
+            return
         }
-        return windows
+
+        let saved = library.history.windows[idx]
+        guard saved.volumeID != volumeID || saved.spreadIndex != spreadIndex else {
+            return
+        }
+
+        library.history.windows[idx].volumeID = volumeID
+        library.history.windows[idx].spreadIndex = spreadIndex
+        library.saveState()
     }
 
-    private func saveSavedWindows(_ windows: [ReaderWindowState]) {
-        guard let data = try? JSONEncoder().encode(windows) else { return }
-        UserDefaults.standard.set(data, forKey: Self.savedWindowsKey)
-    }
+    // MARK: - Window persistence
 
     private func addSavedWindow(_ state: ReaderWindowState) {
-        var windows = loadSavedWindows()
-        windows.removeAll { $0.id == state.id }
-        windows.append(state)
-        saveSavedWindows(windows)
+        let saved = SavedWindow(
+            id: state.id,
+            volumeID: state.volumeID,
+            spreadIndex: state.spreadIndex
+        )
+
+        if let existing = library.history.windows.first(where: { $0.id == state.id }),
+           existing.id == saved.id,
+           existing.volumeID == saved.volumeID,
+           existing.spreadIndex == saved.spreadIndex {
+            return
+        }
+
+        library.history.windows.removeAll { $0.id == state.id }
+        library.history.windows.append(saved)
+        library.saveState()
     }
 
     private func removeSavedWindow(id: UUID) {
-        var windows = loadSavedWindows()
-        windows.removeAll { $0.id == id }
-        saveSavedWindows(windows)
+        guard library.history.windows.contains(where: { $0.id == id }) else {
+            return
+        }
+        library.history.windows.removeAll { $0.id == id }
+        library.saveState()
     }
 }

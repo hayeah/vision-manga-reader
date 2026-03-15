@@ -11,14 +11,14 @@ struct VisionMangaReaderApp: App {
             } else if !appState.hasRoot {
                 SetupView(appState: appState, windowState: $windowState)
             } else {
-                // Has root, no windowState — first window on relaunch
-                let first = appState.firstWindowState
+                // Has root, no windowState — bootstrap the first restored window
+                let first = appState.prepareInitialWindowState()
                 Group {
                     if let first {
-                        ReaderWindowView(appState: appState, windowState: first)
+                        ProgressView("Loading...")
                             .onAppear {
                                 windowState = first
-                                appState.openRemainingWindows(openWindow: openWindow)
+                                appState.openRemainingWindowsIfNeeded(openWindow: openWindow)
                             }
                     } else {
                         // Root exists but no volumes found

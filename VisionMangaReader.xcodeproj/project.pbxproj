@@ -16,15 +16,12 @@
 		B10000000000000000000005 /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* ImageLoader.swift */; };
 		B10000000000000000000007 /* ReaderWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* ReaderWindowView.swift */; };
 		B10000000000000000000008 /* PageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* PageView.swift */; };
-		B10000000000000000000009 /* ReaderToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* ReaderToolbar.swift */; };
 		B10000000000000000000012 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* ReaderView.swift */; };
 		B1000000000000000000000A /* SpreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000A /* SpreadView.swift */; };
 		B1000000000000000000000B /* SubjectExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000C /* SubjectExtractor.swift */; };
 		B1000000000000000000000C /* MangaLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* MangaLibrary.swift */; };
 		B1000000000000000000000D /* MangaSeries.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000E /* MangaSeries.swift */; };
 		B1000000000000000000000E /* VolumeProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* VolumeProgress.swift */; };
-		B1000000000000000000000F /* SeriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* SeriesListView.swift */; };
-		B10000000000000000000010 /* VolumeDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* VolumeDrawer.swift */; };
 		B20000000000000000000001 /* MangaLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* MangaLibraryTests.swift */; };
 		B20000000000000000000002 /* SnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* SnapshotTests.swift */; };
 		B30000000000000000000001 /* PreviewContent in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000001 /* PreviewContent */; };
@@ -51,7 +48,6 @@
 		A10000000000000000000005 /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
 		A10000000000000000000007 /* ReaderWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderWindowView.swift; sourceTree = "<group>"; };
 		A10000000000000000000008 /* PageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageView.swift; sourceTree = "<group>"; };
-		A10000000000000000000009 /* ReaderToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderToolbar.swift; sourceTree = "<group>"; };
 		A10000000000000000000012 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		A1000000000000000000000A /* SpreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpreadView.swift; sourceTree = "<group>"; };
 		A1000000000000000000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -59,8 +55,6 @@
 		A1000000000000000000000D /* MangaLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaLibrary.swift; sourceTree = "<group>"; };
 		A1000000000000000000000E /* MangaSeries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaSeries.swift; sourceTree = "<group>"; };
 		A1000000000000000000000F /* VolumeProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeProgress.swift; sourceTree = "<group>"; };
-		A10000000000000000000010 /* SeriesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesListView.swift; sourceTree = "<group>"; };
-		A10000000000000000000011 /* VolumeDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeDrawer.swift; sourceTree = "<group>"; };
 		A20000000000000000000001 /* MangaLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaLibraryTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* SnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotTests.swift; sourceTree = "<group>"; };
 		D10000000000000000000002 /* VisionMangaReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VisionMangaReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,11 +132,8 @@
 				A10000000000000000000007 /* ReaderWindowView.swift */,
 				A10000000000000000000008 /* PageView.swift */,
 				A10000000000000000000014 /* SetupView.swift */,
-				A10000000000000000000009 /* ReaderToolbar.swift */,
 				A10000000000000000000012 /* ReaderView.swift */,
-				A10000000000000000000010 /* SeriesListView.swift */,
 				A1000000000000000000000A /* SpreadView.swift */,
-				A10000000000000000000011 /* VolumeDrawer.swift */,
 				A30000000000000000000002 /* Previews.swift */,
 			);
 			path = Views;
@@ -274,15 +265,12 @@
 				B10000000000000000000005 /* ImageLoader.swift in Sources */,
 				B10000000000000000000007 /* ReaderWindowView.swift in Sources */,
 				B10000000000000000000008 /* PageView.swift in Sources */,
-				B10000000000000000000009 /* ReaderToolbar.swift in Sources */,
 				B10000000000000000000012 /* ReaderView.swift in Sources */,
 				B1000000000000000000000A /* SpreadView.swift in Sources */,
 				B1000000000000000000000B /* SubjectExtractor.swift in Sources */,
 				B1000000000000000000000C /* MangaLibrary.swift in Sources */,
 				B1000000000000000000000D /* MangaSeries.swift in Sources */,
 				B1000000000000000000000E /* VolumeProgress.swift in Sources */,
-				B1000000000000000000000F /* SeriesListView.swift in Sources */,
-				B10000000000000000000010 /* VolumeDrawer.swift in Sources */,
 				B30000000000000000000002 /* Previews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

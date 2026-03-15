@@ -39,19 +39,6 @@ private func previewVolumes(count: Int = 9) -> [MangaVolume] {
     }
 }
 
-private func previewHistory() -> ReadingHistory {
-    var h = ReadingHistory()
-    h.progress["SeriesA/第01卷"] = VolumeProgress(lastSpreadIndex: 19, totalSpreads: 20, lastReadDate: .now, isCompleted: true)
-    h.progress["SeriesA/第02卷"] = VolumeProgress(lastSpreadIndex: 24, totalSpreads: 25, lastReadDate: .now, isCompleted: true)
-    h.progress["SeriesA/第03卷"] = VolumeProgress(lastSpreadIndex: 8, totalSpreads: 22, lastReadDate: .now, isCompleted: false)
-    return h
-}
-
-private func previewLibrary() -> MangaLibrary {
-    let lib = MangaLibrary()
-    return lib
-}
-
 // MARK: - Previews
 
 #Preview("Spread View — Reader") {
@@ -71,25 +58,6 @@ private func previewLibrary() -> MangaLibrary {
     let _ = { book.currentSpreadIndex = 1 }()
     SpreadView(book: book)
         .background(.black)
-}
-
-#Preview("Volume Drawer") {
-    VolumeDrawer(
-        volumes: previewVolumes(),
-        currentVolumeID: "SeriesA/第04卷",
-
-        onSelectVolume: { _ in }
-    )
-    .frame(height: 400)
-}
-
-#Preview("Series List") {
-    SeriesListView(
-        library: previewLibrary(),
-        currentVolumeID: "SeriesA/第04卷",
-        onSelectSeries: { _ in }
-    )
-    .frame(height: 500)
 }
 
 #Preview("Full Reader") {

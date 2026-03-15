@@ -24,7 +24,7 @@ struct DuplicatedReaderView: View {
             } else {
                 VStack(spacing: 0) {
                     SpreadView(book: book)
-                    ReaderToolbar(book: book, showVolumeDrawer: $showVolumeDrawer)
+                    ReaderToolbar(book: book)
                 }
             }
         }

@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var noImagesFound = false
     @State private var showVolumeDrawer = false
     @State private var showEndOfVolumePrompt = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
@@ -79,27 +80,39 @@ struct ContentView: View {
 
     // MARK: - Reader with side panels
 
+    private func returnToLibrary() {
+        book.closeFolder()
+        currentVolumeID = nil
+        showVolumeDrawer = false
+        showEndOfVolumePrompt = false
+    }
+
+    private func duplicateWindow() {
+        guard let folderURL = book.folderURL else { return }
+        guard let windowID = try? ReaderWindowID(
+            folderURL: folderURL,
+            spreadIndex: book.currentSpreadIndex
+        ) else { return }
+        openWindow(id: "reader", value: windowID)
+    }
+
     private var readerWithPanels: some View {
         HStack(spacing: 0) {
-            VStack(spacing: 0) {
-                ZStack(alignment: .top) {
-                    SpreadView(book: book)
+            ZStack(alignment: .bottomTrailing) {
+                SpreadView(book: book)
 
-                    if showEndOfVolumePrompt {
-                        endOfVolumePrompt
-                    }
+                if showEndOfVolumePrompt {
+                    endOfVolumePrompt
                 }
 
-                ReaderToolbar(
-                    book: book,
-                    showVolumeDrawer: $showVolumeDrawer,
-                    onLibrary: {
-                        book.closeFolder()
-                        currentVolumeID = nil
-                        showVolumeDrawer = false
-                        showEndOfVolumePrompt = false
-                    }
-                )
+                if book.spreadCount > 0 {
+                    Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
+                        .monospacedDigit()
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 16)
+                }
             }
 
             if showVolumeDrawer, let currentSeries {
@@ -112,17 +125,35 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showVolumeDrawer)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    book.closeFolder()
-                    currentVolumeID = nil
-                    showVolumeDrawer = false
-                    showEndOfVolumePrompt = false
-                } label: {
+        .ornament(visibility: .automatic, attachmentAnchor: .scene(.leading), contentAlignment: .trailing) {
+            VStack(spacing: 12) {
+                Button { showVolumeDrawer.toggle() } label: {
+                    Label("Volumes", systemImage: "list.number")
+                }
+                .help("Show volume list")
+
+                Button { returnToLibrary() } label: {
                     Label("Library", systemImage: "books.vertical")
                 }
+                .help("Back to library")
+
+                Button { duplicateWindow() } label: {
+                    Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+                }
+                .help("Open in new window")
+
+                Divider()
+
+                Button { book.toggleShift() } label: {
+                    Label("Toggle page pairing", systemImage: "arrow.left.arrow.right")
+                        .symbolVariant(book.isCurrentSequenceShifted ? .fill : .none)
+                }
+                .help("Toggle page pairing offset")
+                .disabled(!book.canToggleShift)
             }
+            .labelStyle(.iconOnly)
+            .padding(8)
+            .glassBackgroundEffect()
         }
         .onChange(of: book.currentSpreadIndex) { _, newIndex in
             guard let currentVolumeID else { return }

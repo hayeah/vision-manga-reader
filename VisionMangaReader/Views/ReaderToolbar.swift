@@ -2,9 +2,6 @@ import SwiftUI
 
 struct ReaderToolbar: View {
     @Bindable var book: MangaBook
-    @Binding var showVolumeDrawer: Bool
-    @Environment(\.openWindow) private var openWindow
-    var onLibrary: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 16) {
@@ -26,43 +23,8 @@ struct ReaderToolbar: View {
             }
 
             Spacer()
-
-            HStack(spacing: 12) {
-                // Volume drawer toggle
-                Button {
-                    showVolumeDrawer.toggle()
-                } label: {
-                    Label("Volumes", systemImage: "list.number")
-                }
-                .help("Show volume list")
-
-                // Library
-                Button {
-                    onLibrary()
-                } label: {
-                    Label("Library", systemImage: "books.vertical")
-                }
-                .help("Back to library")
-
-                // Duplicate window
-                Button {
-                    duplicateWindow()
-                } label: {
-                    Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
-                }
-                .help("Open in new window")
-            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-    }
-
-    private func duplicateWindow() {
-        guard let folderURL = book.folderURL else { return }
-        guard let windowID = try? ReaderWindowID(
-            folderURL: folderURL,
-            spreadIndex: book.currentSpreadIndex
-        ) else { return }
-        openWindow(id: "reader", value: windowID)
     }
 }

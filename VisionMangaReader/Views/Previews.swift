@@ -101,11 +101,76 @@ private func previewLibrary() -> MangaLibrary {
         VolumeDrawer(
             volumes: previewVolumes(),
             currentVolumeID: "SeriesA/第04卷",
-    
+
             onSelectVolume: { _ in }
         )
     }
     .background(.black)
+}
+
+#Preview("Full Reader") {
+    ReaderPreview()
+}
+
+/// Stateful wrapper so the reader preview has interactive controls.
+private struct ReaderPreview: View {
+    @State private var book = previewBook()
+    @State private var showVolumeDrawer = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ZStack(alignment: .bottomTrailing) {
+                SpreadView(book: book)
+
+                if book.spreadCount > 0 {
+                    Text("\(book.currentSpreadIndex + 1) / \(book.spreadCount)")
+                        .monospacedDigit()
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 16)
+                }
+            }
+
+            if showVolumeDrawer {
+                VolumeDrawer(
+                    volumes: previewVolumes(),
+                    currentVolumeID: "SeriesA/第04卷",
+                    onSelectVolume: { _ in }
+                )
+                .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showVolumeDrawer)
+        // Ornaments only render in a real window, not canvas previews.
+        // Simulating the nav buttons as an overlay for preview purposes.
+        .overlay(alignment: .leading) {
+            VStack(spacing: 12) {
+                Button { showVolumeDrawer.toggle() } label: {
+                    Label("Volumes", systemImage: "list.number")
+                }
+                Button {} label: {
+                    Label("Library", systemImage: "books.vertical")
+                }
+                Button {} label: {
+                    Label("Duplicate", systemImage: "plus.rectangle.on.rectangle")
+                }
+
+                Divider()
+
+                Button { book.toggleShift() } label: {
+                    Label("Toggle page pairing", systemImage: "arrow.left.arrow.right")
+                        .symbolVariant(book.isCurrentSequenceShifted ? .fill : .none)
+                }
+                .disabled(!book.canToggleShift)
+            }
+            .labelStyle(.iconOnly)
+            .padding(8)
+            .glassBackgroundEffect()
+            .padding(.leading, 8)
+        }
+        .background(.black)
+    }
 }
 
 #Preview("End of Volume Prompt") {

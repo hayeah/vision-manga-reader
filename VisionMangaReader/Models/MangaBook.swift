@@ -104,7 +104,7 @@ class MangaBook {
     func loadPages(from url: URL) {
         closeFolder()
         loadError = nil
-        guard url.startAccessingSecurityScopedResource() else { return }
+        let _ = url.startAccessingSecurityScopedResource()
         folderURL = url
         pageURLs = FolderAccess.enumerateImages(in: url)
 

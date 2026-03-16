@@ -11,6 +11,7 @@
 		B20000000000000000000001 /* MangaLibraryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* MangaLibraryTests.swift */; };
 		B20000000000000000000002 /* SnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* SnapshotTests.swift */; };
 		B30000000000000000000001 /* PreviewContent in Resources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000001 /* PreviewContent */; };
+		B40000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000001 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +30,7 @@
 		A20000000000000000000001 /* MangaLibraryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaLibraryTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* SnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotTests.swift; sourceTree = "<group>"; };
 		A30000000000000000000001 /* PreviewContent */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PreviewContent; sourceTree = "<group>"; };
+		A40000000000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D10000000000000000000002 /* VisionMangaReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VisionMangaReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D20000000000000000000001 /* VisionMangaReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VisionMangaReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -71,6 +73,7 @@
 			children = (
 				A10000000000000000000001 /* VisionMangaReaderApp.swift */,
 				A1000000000000000000000B /* Info.plist */,
+				A40000000000000000000001 /* Assets.xcassets */,
 				8CB7B47C2F66B9C50049D125 /* Models */,
 				8CB7B4862F66B9C90049D125 /* Services */,
 				8CB7B4902F66B9CC0049D125 /* Views */,
@@ -184,6 +187,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B30000000000000000000001 /* PreviewContent in Resources */,
+				B40000000000000000000001 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

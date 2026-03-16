@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "manga-panel-segmenter"
+version = "0.1.0"
+description = "Segment manga page panels with a Hugging Face-hosted YOLO model"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "huggingface-hub>=0.32.0",
+  "numpy>=2.0.0",
+  "opencv-python-headless>=4.10.0.84",
+  "typer>=0.16.0",
+  "ultralytics>=8.3.0",
+]
+
+[project.scripts]
+manga-panel-segment = "manga_panel_segmenter.cli:main"
+manga-panel-overlay = "manga_panel_segmenter.overlay_cli:main"
+manga-panel-compare = "manga_panel_segmenter.compare_cli:main"
+
+[dependency-groups]
+dev = [
+  "pyright>=1.1.399",
+  "pytest>=8.3.5",
+  "ruff>=0.11.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/manga_panel_segmenter"]
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"

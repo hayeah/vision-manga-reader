@@ -586,5 +586,18 @@ struct SpreadView: View {
             pinchHolds = [:]
             clearSubjectSelection()
         }
+        .focusable()
+        .onKeyPress(.leftArrow) {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                book.nextSpread()
+            }
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                book.previousSpread()
+            }
+            return .handled
+        }
     }
 }

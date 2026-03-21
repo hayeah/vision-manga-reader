@@ -7,13 +7,15 @@ dependencies = [
     "typer",
     "Pillow",
     "manga-panel-segmenter",
-    "hayeah",
+    "hayeah-core",
+    "hayeah-imagegen",
     "python-dotenv",
 ]
 
 [tool.uv.sources]
 manga-panel-segmenter = { path = "../manga_panel_segmenter", editable = true }
-hayeah = { path = "../../../dotfiles/hayeah", editable = true }
+hayeah-core = { path = "../../../dotfiles/hayeah", editable = true }
+hayeah-imagegen = { path = "../../../dotfiles/skills/imagegen", editable = true }
 
 [project.scripts]
 manga = "manga_creative.main:run"

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from hayeah import logger
+from hayeah.core import logger
 
 from manga_panel_segmenter.model_presets import resolve_profile
 from manga_panel_segmenter.segmenter import MangaPanelSegmenter, ModelSpec
